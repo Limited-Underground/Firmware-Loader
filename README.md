@@ -1,6 +1,6 @@
 # Limited Underground Firmware Loader — Preview
 
-Public repository: <https://github.com/nbjelanovic/Limited-Underground-Firmware-Loader>
+Public repository: <https://github.com/Limited-Underground/Firmware-Loader>
 
 One Windows application is intended to service both related product families:
 

@@ -1,6 +1,13 @@
 # Project status
 
-Status: public host-tested preview with the OpenTrail inspection provider active; 2026-08-17.
+Status: public host-tested preview with the OpenTrail inspection provider active; 2026-08-31.
+
+The public repository moved into the Limited Underground organization and was
+renamed `Firmware-Loader`. GitHub repository ID `1336427703`, `main` history,
+visibility, and Apache License detection were preserved, and the former URL
+redirects to <https://github.com/Limited-Underground/Firmware-Loader>. This
+administrative migration changes no loader capability, trust, installation
+authority, hardware evidence, or readiness claim.
 
 ## Proven
 
@@ -24,7 +31,7 @@ Status: public host-tested preview with the OpenTrail inspection provider active
 - Trail exposes a one-file, read-only offline inspection workflow. It retains no local path, publishes sanitized fields only, clears stale results with the session lifecycle, and continues to report signer trust and installation admission as unavailable.
 - Display keeps offline inspection unavailable because it has no accepted provider or target manifest.
 - Sixty-three deterministic groups and source-policy checks pass without launching the UI or accessing hardware.
-- The independent public repository is published at <https://github.com/nbjelanovic/Limited-Underground-Firmware-Loader>; `main` is the default branch and GitHub detects Apache License 2.0.
+- The independent public repository is published at <https://github.com/Limited-Underground/Firmware-Loader>; `main` is the default branch and GitHub detects Apache License 2.0.
 
 ## Not proven
 
