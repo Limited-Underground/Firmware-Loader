@@ -8,6 +8,8 @@ var repositoryRoot = args.Length == 1
     ? Path.GetFullPath(args[0])
     : throw new InvalidOperationException("Repository root argument is required.");
 
+LoaderUpdateUiTests.RepositoryRoot = repositoryRoot;
+
 var tests = new (string Name, Action Run)[]
 {
     ("catalog has exact two systems", CatalogHasExactTwoSystems),
@@ -45,7 +47,12 @@ var tests = new (string Name, Action Run)[]
 .Concat(ProviderLifecycleTests.All)
 .Concat(OfflineBundleInspectionWorkflowTests.All)
 .Concat(OpenTrailInspectionProviderTests.All)
+.Concat(TrailReleaseAdmissionBoundaryTests.All)
+.Concat(HostUpdateEngineTests.All)
+.Concat(LoaderUpdateUiTests.All)
 .ToArray();
+
+if (Environment.GetEnvironmentVariable("LUF_UI_ONLY") == "1") tests = LoaderUpdateUiTests.All.ToArray();
 
 foreach (var test in tests)
 {
