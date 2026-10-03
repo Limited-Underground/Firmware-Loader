@@ -4,6 +4,8 @@ using System.Buffers.Binary;
 using System.Text;
 using System.Security.Cryptography;
 
+if (HostOperationStoreTests.TryRunChild(args)) return;
+
 var repositoryRoot = args.Length == 1
     ? Path.GetFullPath(args[0])
     : throw new InvalidOperationException("Repository root argument is required.");
@@ -49,10 +51,12 @@ var tests = new (string Name, Action Run)[]
 .Concat(OpenTrailInspectionProviderTests.All)
 .Concat(TrailReleaseAdmissionBoundaryTests.All)
 .Concat(HostUpdateEngineTests.All)
+.Concat(HostOperationStoreTests.All)
 .Concat(LoaderUpdateUiTests.All)
 .ToArray();
 
 if (Environment.GetEnvironmentVariable("LUF_UI_ONLY") == "1") tests = LoaderUpdateUiTests.All.ToArray();
+if (Environment.GetEnvironmentVariable("LUF_STORE_ONLY") == "1") tests = HostOperationStoreTests.All.ToArray();
 
 foreach (var test in tests)
 {

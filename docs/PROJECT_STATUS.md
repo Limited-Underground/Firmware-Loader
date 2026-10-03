@@ -1,6 +1,6 @@
 # Project status
 
-Status: inspection-only preview; LUF-0009b accepted, populated LUF-0009c host/UI checkpoint owner-accepted; 2026-09-29.
+Status: inspection-only preview; LUF-0009b host engine, LUF-0009c UI checkpoint and LUF-0009d durable host store owner-accepted; 2026-10-03.
 
 The public repository moved into the Limited Underground organization and was
 renamed `Firmware-Loader`. GitHub repository ID `1336427703`, `main` history,
@@ -45,8 +45,7 @@ authority, hardware evidence, or readiness claim.
 The independently reviewed populated
 [LUF-0009c UI checkpoint](testing/LUF-0009c-UI-CHECKPOINT-2026-09-29.md) is owner-accepted.
 The LUF-0009b host engine is owner-accepted; its production trust and physical
-limitations remain unchanged. Physical installation/recovery still requires
-separate exact setup approval and authorization under LUF-0010a.
+limitations remain unchanged. The [LUF-0010a host matrix](testing/LUF-0010a-HOST-MATRIX-2026-10-01.md) now identifies exact available target/image/layout inputs and the remaining production release, real adapter, complete protected-span policy and independent recovery gates. Physical installation/recovery still requires separate exact setup approval and current authorization. [LUF-0009d durable host storage](testing/LUF-0009d-DURABLE-HOST-STORE-2026-10-01.md) is owner-accepted for its validated host-only scope under approved revision 1. Twenty new groups and the complete 136-group warning-as-error matrix pass. Cooperating-process exclusion and durable digest-only intent are validated in an isolated host store; production root/ACL enrollment, unrelated-tool exclusion, real device/power-loss acceptance and enabled installation remain separate.
 
 ## LUF-0009b host engine checkpoint
 

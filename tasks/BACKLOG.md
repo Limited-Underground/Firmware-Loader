@@ -41,5 +41,6 @@ Planning only: the remaining approved V1 scope is decomposed below. Registration
 | LUF-0009a | accepted lifecycle proposal | LUF-0009 | [Specify exact Trail device update and recovery lifecycle](../docs/testing/LUF-0009a-UPDATE-RECOVERY-LIFECYCLE-2026-09-23.md) |
 | LUF-0009b | accepted host checkpoint | LUF-0009 | [Approved Trail host admission and adapter engine slice](../docs/testing/LUF-0009b-HOST-ENGINE-2026-09-29.md) |
 | LUF-0009c | host/UI checkpoint owner-accepted | LUF-0009 | [Trail device selection and update status UI](../docs/testing/LUF-0009c-UI-CHECKPOINT-2026-09-29.md) |
-| LUF-0010a | planned | LUF-0010 | Validate exact Trail installation and independent recovery |
+| LUF-0009d | done (owner-accepted host scope) | LUF-0009 | [Durable process ownership and uncertainty notice](../docs/testing/LUF-0009d-DURABLE-HOST-STORE-2026-10-01.md): existing interfaces, strict post-lock reload and digest-only atomic persistence; 20 new/136 complete groups pass with warning-as-error builds and independent review. Production storage enrollment, adapter, signer/format, devices and distribution remain separate. |
+| LUF-0010a | host matrix prepared; physical prerequisites blocked | LUF-0010 | [Exact Trail installation and recovery matrix](../docs/testing/LUF-0010a-HOST-MATRIX-2026-10-01.md); production authority, real adapter, complete preservation policy and current recovery setup remain prerequisites. |
 | LUF-0011a | planned | LUF-0011 | Accept Trail Loader package and supported release documentation |
