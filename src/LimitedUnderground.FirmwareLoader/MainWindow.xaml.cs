@@ -107,6 +107,7 @@ public partial class MainWindow : Window
 
     private void ClearInspection()
     {
+        UpdatePanel.Invalidate();
         InspectionResultPanel.Visibility = Visibility.Collapsed;
         InspectionHeading.Text = string.Empty;
         InspectionSummary.Text = string.Empty;

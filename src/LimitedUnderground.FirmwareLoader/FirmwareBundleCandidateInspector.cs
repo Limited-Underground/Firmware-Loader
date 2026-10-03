@@ -20,7 +20,8 @@ public sealed class FirmwareBundleCandidateResult
         ulong releaseGeneration,
         uint imageBytes,
         string summary,
-        string blockerText)
+        string blockerText,
+        string imageSha256 = "")
     {
         StructureVerified = structureVerified;
         ImageDigestVerified = imageDigestVerified;
@@ -34,6 +35,7 @@ public sealed class FirmwareBundleCandidateResult
         TargetKey = targetKey;
         ReleaseGeneration = releaseGeneration;
         ImageBytes = imageBytes;
+        ImageSha256 = imageSha256;
         Summary = summary;
         BlockerText = blockerText;
     }
@@ -63,6 +65,8 @@ public sealed class FirmwareBundleCandidateResult
     public string Summary { get; }
 
     public string BlockerText { get; }
+
+    internal string ImageSha256 { get; }
 
     internal LoaderBundleInspectionContext Context { get; }
 }
@@ -196,6 +200,7 @@ public static class FirmwareBundleCandidateInspector
             targetKey: manifest.TargetKey,
             releaseGeneration: manifest.ReleaseGeneration,
             imageBytes: manifest.ImageBytes,
+            imageSha256: Convert.ToHexString(imageDigest),
             summary: productMatched
                 ? "Candidate structure, product binding, and image SHA-256 verified"
                 : "Candidate belongs to a different Limited Underground system",
