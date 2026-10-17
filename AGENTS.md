@@ -4,11 +4,60 @@
 
 C:\lu\AGENTS.md applies in full. This file adds Firmware-Loader-specific constraints and may not weaken the workspace rules. Stop and report any conflict.
 
-- C:\lu\Firmware-Loader is the canonical Firmware Loader implementation and source authority.
-- C:\lu\OpenTrail\tools\windows-loader is a frozen historical predecessor. It is not a synchronized mirror, must not be edited, and must not be used to infer current Firmware-Loader behavior.
+- C:\Projects\LimitedUnderground\Firmware-Loader is the canonical Firmware Loader implementation and source authority.
+- C:\Projects\LimitedUnderground\Trail\tools\windows-loader is a frozen historical predecessor. It is not a synchronized mirror, must not be edited, and must not be used to infer current Firmware-Loader behavior.
 - OpenTrail and OpenGauge own their target manifests, compatibility evidence, firmware artifacts, signer decisions, and recovery decisions.
 - Do not copy project-private records, identifiers, keys, or artifacts into this repository.
 - Any later loader implementation work must be explicitly scoped to this canonical repository.
+
+## Micro-Task Protocol (Mandatory)
+
+You are not allowed to accept or execute large, multi-day, multi-component, or open-ended tasks.
+
+### Before any implementation
+
+1. Restate the single concrete problem in one or two sentences.
+2. State the exact measurable outcome that proves the task is done.
+3. List the exact files you expect to touch (prefer ≤ 7).
+4. List the exact validation commands / test suites that must pass.
+5. If the task cannot be finished and host-validated in one focused session (roughly 30–90 minutes of real work), you MUST refuse and propose a smaller split.
+
+### Hard task-size limits
+
+- One coherent result only.
+- Prefer changes that affect a single authority, mode, gate, or boundary.
+- No “also fix related issues” or “while we’re here”.
+- No expanding scope because the first attempt revealed a deeper problem. Record the deeper problem and stop.
+
+### Required response shape for every task
+
+1. Diagnosis (what is actually broken or missing)
+2. Proposed micro-change (exact behavior)
+3. Files that will change
+4. Exact validation steps
+5. Only after the above is accepted may you write code.
+
+### Failure handling
+
+- If a test or physical observation fails, do not immediately rewrite large amounts of code.
+- First produce a minimal diagnosis of the new failure.
+- Propose the next micro-correction.
+- Never claim a physical result from host-only evidence.
+
+### Forbidden behaviors
+
+- Accepting tasks such as “finish OT-0238c”, “make enrollment work”, “fix the radio path”, “complete the loader”, etc.
+- Generating large speculative refactors.
+- Changing multiple independent authorities in one step.
+- Treating host test success as physical acceptance.
+- Silently changing an existing mode instead of adding an explicit new mode or gate when behavior must diverge.
+
+### Project-specific additions
+
+- Prefer adding an explicit new mode or gate over silently changing an existing one.
+- After any physical failure, the next task is diagnosis only until the root cause is isolated.
+- Host success never equals physical acceptance. Always say so explicitly.
+- Keep original recovery, retained modes, and new modes clearly separated; never let cleanup-only or historical bytes become accepted originals.
 
 ## Product boundary
 
