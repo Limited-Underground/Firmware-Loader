@@ -52,6 +52,7 @@ var tests = new (string Name, Action Run)[]
 .Concat(TrailReleaseAdmissionBoundaryTests.All)
 .Concat(HostUpdateEngineTests.All)
 .Concat(HostOperationStoreTests.All)
+.Concat(HostPreservationPlanTests.All)
 .Concat(LoaderUpdateUiTests.All)
 .ToArray();
 
