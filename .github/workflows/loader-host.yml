@@ -19,7 +19,6 @@ jobs:
       run:
         shell: pwsh
     env:
-      DOTNET_INSTALL_DIR: ${{ runner.temp }}/loader-sdk
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       DOTNET_NOLOGO: '1'
       LUF_UI_ONLY: '0'
@@ -31,6 +30,8 @@ jobs:
           persist-credentials: false
       - name: Provision .NET 8 SDK
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/loader-sdk
         with:
           dotnet-version: '8.0.426'
           cache: false
