@@ -20,4 +20,4 @@ An incomplete result is written before the wrapper starts. If checkout, provisio
 
 ## Acceptance limits
 
-A green check proves only this host job. It does not prove interactive selection, clean-machine packaging, signing, physical operation, firmware recovery, independent backups or owner acceptance. Adding the workflow does not configure required checks or branch protection. Adoption must be followed by an actual successful hosted run before describing CI as validated; the first hosted run remains pending at this adoption checkpoint.
+A green check proves only this host job. It does not prove interactive selection, clean-machine packaging, signing, physical operation, firmware recovery, independent backups or owner acceptance. Adding the workflow does not configure required checks or branch protection. The initial adoption checkpoint was subsequently qualified by [hosted run 39846978593](https://github.com/Limited-Underground/Firmware-Loader/actions/runs/39846978593), which passed on SDK 8.0.426 and PowerShell 7.6.6. That result is tied to its tested revision; require the current PR head's successful check before any separately authorized merge.
