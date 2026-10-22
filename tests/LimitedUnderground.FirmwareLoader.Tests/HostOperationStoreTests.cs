@@ -136,7 +136,9 @@ internal static class HostOperationStoreTests
     private static void PathRefusal()
     {
         using var t = new TemporaryStore();
-        foreach (string path in new[] { t.Root + "\\", t.Root + "\\.", Path.GetRelativePath(Environment.CurrentDirectory, t.Root) })
+        var relativeRoot = Path.Combine("loader-relative-fixture", "store");
+        Require(!Path.IsPathRooted(relativeRoot) && !Path.IsPathFullyQualified(relativeRoot), "negative fixture must be relative");
+        foreach (string path in new[] { t.Root + "\\", t.Root + "\\.", relativeRoot })
         {
             bool refused = false;
             try { _ = new HostOperationStore(path); }

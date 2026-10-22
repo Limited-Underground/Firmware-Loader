@@ -6,11 +6,9 @@ using System.Security.Cryptography;
 
 if (HostOperationStoreTests.TryRunChild(args)) return;
 
-var repositoryRoot = args.Length == 1
-    ? Path.GetFullPath(args[0])
-    : throw new InvalidOperationException("Repository root argument is required.");
-
-LoaderUpdateUiTests.RepositoryRoot = repositoryRoot;
+if (args.Length != 2) throw new InvalidOperationException("Usage: tests <source-root> <fresh-screenshot-directory>");
+LoaderUpdateUiTests.Output = ScreenshotOutput.Admit(args[0], args[1]);
+var repositoryRoot = Path.GetFullPath(args[0]);
 
 var tests = new (string Name, Action Run)[]
 {
@@ -61,13 +59,15 @@ var tests = new (string Name, Action Run)[]
 if (Environment.GetEnvironmentVariable("LUF_UI_ONLY") == "1") tests = LoaderUpdateUiTests.All.ToArray();
 if (Environment.GetEnvironmentVariable("LUF_STORE_ONLY") == "1") tests = HostOperationStoreTests.All.ToArray();
 
+var suiteMode = Environment.GetEnvironmentVariable("LUF_STORE_ONLY") == "1" ? "store-only" : Environment.GetEnvironmentVariable("LUF_UI_ONLY") == "1" ? "ui-only" : "full";
+Console.WriteLine($"Suite mode: {suiteMode}; selected groups: {tests.Length}");
 foreach (var test in tests)
 {
     test.Run();
     Console.WriteLine($"PASS: {test.Name}");
 }
 
-Console.WriteLine($"{tests.Length} shared loader offline groups passed.");
+Console.WriteLine($"{tests.Length} shared loader offline groups passed; mode={suiteMode}.");
 
 void CatalogHasExactTwoSystems()
 {
