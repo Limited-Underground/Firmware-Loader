@@ -12,9 +12,9 @@ Preserve existing working changes and original evidence. Before moving or deleti
 
 Publication needs explicit authorization for the repository, destination and ref, including each applicable commit, fetch/pull, push, PR, merge and remote-verification operation. Do not bulk-publish unrelated changes, rewrite history, force-push, delete backup branches or bypass required checks. Website deployment is separate scope.
 
-### Existing CI cadence
+### CI and publication timing
 
-Morning means 8:00 AM America/New_York. Accumulate related changes locally and open at most one PR per repository per day, first thing in the morning or when the day starts. Do not open another while an existing PR's CI is running. Prefer batching two or three related tasks where practical. Full host CI is expected once per repository in the morning rather than per small task; docs-only changes should avoid unrelated full-matrix reruns. Every configured required check must pass before an explicitly authorized merge; branch protection remains in force.
+The owner retired the daily batching rule on October 22, 2026. There is no one-PR-per-day limit, morning publication window or once-daily CI requirement. Batch related changes when useful, without imposing a time gate. Use validation appropriate to the change; documentation-only changes do not require unrelated host-test reruns. Explicit publication authorization, configured required checks and branch protections still apply.
 
 ## File maintenance
 
