@@ -1,0 +1,48 @@
+name: Loader host validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  loader-host:
+    name: Loader full host gate
+    runs-on: windows-2025
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      DOTNET_INSTALL_DIR: ${{ runner.temp }}/loader-sdk
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+      LUF_UI_ONLY: '0'
+      LUF_STORE_ONLY: '0'
+    steps:
+      - name: Check out event revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Provision .NET 8 SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '8.0.426'
+          cache: false
+      - name: Run full host gate
+        timeout-minutes: 20
+        run: ./tools/Invoke-LoaderCi.ps1
+      - name: Retain sanitized result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: loader-host-result-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/loader-ci-public/result.json
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: false

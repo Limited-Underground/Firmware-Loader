@@ -29,3 +29,7 @@ Never publish raw local logs automatically. Some test fixture classes still disp
 ## Current limits
 
 The output guards assume cooperative single-user execution and do not eliminate hostile concurrent path replacement. The applied correction passed a full189-group host run with actual WPF rendering; see [validation evidence](testing/VALIDATION-WORKFLOW-RECOVERY-2026-10-22.md). A later isolated restored-source run also passed all 189 groups with source/working directory and temporary output on different volumes; see the separate restored-run observation in that evidence record. Manual interaction and physical acceptance remain unverified by these host results. Consult project status for current executed cases and remaining gaps.
+
+## Hosted CI
+
+The [GitHub host gate](testing/CI-HOST-GATE.md) describes the workflow, sanitized evidence, failure handling and acceptance limits. Hosted execution remains unverified until an actual run succeeds.
