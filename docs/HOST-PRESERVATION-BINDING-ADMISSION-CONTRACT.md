@@ -1,6 +1,6 @@
 # Host preservation binding to fixture admission: preflight contract
 
-Status: design proposal, 2026-10-19. The owner authorized this document and independent review only. No checker, integration hook, production policy, device operation or new task approval is implemented by this document. Host consistency is not physical acceptance.
+Status: original design contract dated October 19, 2026; implementation status reconciled October 22, 2026. The pure host checker is now implemented in [HostPreservationBindingPreflight.cs](../src/LimitedUnderground.FirmwareLoader/HostPreservationBindingPreflight.cs), with 24 registered deterministic groups in [HostPreservationBindingPreflightTests.cs](../tests/LimitedUnderground.FirmwareLoader.Tests/HostPreservationBindingPreflightTests.cs), and was merged in [PR #11](https://github.com/Limited-Underground/Firmware-Loader/pull/11). The historical proposal wording below describes the design boundary, not an outstanding need to implement that checker again. The checker assesses fixture consistency only; engine integration, production admission/trust, device operations and physical acceptance remain outside this implemented scope. The current complete host-validation layer is recorded in [Project status](PROJECT_STATUS.md). Host consistency is not physical acceptance.
 
 ## Problem and one intended consumer
 

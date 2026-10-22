@@ -10,15 +10,11 @@
 | LUF-005 | next | Add Display inspection provider | Requires an OpenGauge-owned target manifest and evidence boundary; no inferred compatibility |
 | LUF-006 | blocked | Firmware installation and recovery | Requires independent signer verification, exact-device, write/readback/boot/rollback/recovery acceptance for every claimed target |
 
+The introductory status labels above are historical product milestones. In particular, LUF-005 does not select Display work during the current recovery freeze or expand the Trail base-V1 scope. Consult the current GitHub Project and CONTRIBUTING before selecting work.
 
 ## Checklist task allocations
 
-Owner-requested ID assignment only; all rows are planned and grant no implementation,
-hardware or publication authority. Four-digit numbers identify parent tasks; lowercase
-letter suffixes identify child work. Historical IDs, filenames and accepted evidence
-remain unchanged. Completed historical parent records are not reopened by child allocation.
-These rows own the IDs used by the private checklist. Resolve overlapping planning
-and implementation scope before execution; do not perform the same work twice.
+Historical owner-requested ID allocation follows. The statuses in this allocation table describe that planning snapshot and do not supersede current GitHub Project records or the recovery freeze. Four-digit numbers identify parent tasks; lowercase letter suffixes identify child work. Preserve historical IDs, filenames and accepted evidence. The retired private checklist is provenance only, not a current execution or approval authority. Reconcile overlapping planning and implementation scope before execution; do not perform completed work twice.
 
 | ID | Status | Parent | Task | Acceptance |
 | --- | --- | --- | --- | --- |
