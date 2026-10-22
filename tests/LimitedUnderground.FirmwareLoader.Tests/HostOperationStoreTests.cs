@@ -136,13 +136,29 @@ internal static class HostOperationStoreTests
     private static void PathRefusal()
     {
         using var t = new TemporaryStore();
-        foreach (string path in new[] { t.Root + "\\", t.Root + "\\.", Path.GetRelativePath(Environment.CurrentDirectory, t.Root) })
+        foreach (string path in new[] { t.Root + "\\", t.Root + "\\." })
         {
             bool refused = false;
             try { _ = new HostOperationStore(path); }
             catch (InvalidOperationException e) { refused = e.Message == "host-store-unavailable"; }
             Require(refused, "canonical absolute root required");
         }
+        var originalDirectory = Environment.CurrentDirectory;
+        try
+        {
+            // Resolve an existing valid store on its own volume, even when the caller is elsewhere.
+            Environment.CurrentDirectory = Path.GetDirectoryName(t.Root)!;
+            var relativeRoot = Path.GetFileName(t.Root);
+            Require(!Path.IsPathRooted(relativeRoot) && !Path.IsPathFullyQualified(relativeRoot) &&
+                Directory.Exists(relativeRoot) && Path.GetFullPath(relativeRoot) == t.Root,
+                "relative fixture must resolve to the existing valid store");
+            _ = new HostOperationStore(t.Root);
+            bool refused = false;
+            try { _ = new HostOperationStore(relativeRoot); }
+            catch (InvalidOperationException e) { refused = e.Message == "host-store-unavailable"; }
+            Require(refused, "relative existing store must be refused");
+        }
+        finally { Environment.CurrentDirectory = originalDirectory; }
         File.Delete(Path.Combine(t.Root, HostOperationStore.LockName));
         Require(t.Store.TryAcquire() is null && !File.Exists(Path.Combine(t.Root, HostOperationStore.LockName)), "missing stable lock is never recreated");
     }

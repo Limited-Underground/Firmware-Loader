@@ -1,5 +1,9 @@
 # Project status
 
+## Validation workflow recovery — October 22, 2026
+
+The source/output isolation and validation diagnostics correction is applied locally. Both warning-as-error Release builds passed and the full189host groups passed, including actual WPF rendering into the isolated output directory. See [validation evidence and limits](testing/VALIDATION-WORKFLOW-RECOVERY-2026-10-22.md) and [current testing instructions](TESTING.md). Ordinary feature work remains paused for recovery; host success is not physical acceptance or owner resumption. Earlier dated status below remains historical.
+
 Status: inspection-only preview; LUF-0009b host engine, LUF-0009c UI checkpoint and LUF-0009d durable host store owner-accepted; 2026-10-03.
 
 The public repository moved into the Limited Underground organization and was
@@ -71,3 +75,9 @@ complete 116-group warning-as-error matrix pass; populated actual WPF renders
 were reviewed, including minimum-window scrolling. See the linked report above.
 This local UI checkpoint passed independent review and is owner-accepted; no
 hardware, release, publication or progress credit is claimed.
+
+## Recovery continuation — October 22, 2026
+
+The isolated restored source also passed the full 189-group wrapper on a different volume from its temporary outputs, with two Release builds reporting zero warnings/errors and 13 isolated WPF renders. Independent declared-file/checkpoint comparisons passed afterward. See the separate restored-run observation in [validation evidence](testing/VALIDATION-WORKFLOW-RECOVERY-2026-10-22.md).
+
+[File maintenance](MAINTENANCE.md) is adopted in report-only mode. It enables no scheduler or deletion. Its later documentation delta is preserved separately from the earlier source checkpoint. Known historical private members are covered by the checkpoint and their original-format provenance collection was separately copied and verified; originals remain retained. These bounded results do not establish all-root coverage, independent off-computer protection, physical acceptance or owner resumption. Git/publication reconciliation and manual UI/clean-machine/release gates remain separate.

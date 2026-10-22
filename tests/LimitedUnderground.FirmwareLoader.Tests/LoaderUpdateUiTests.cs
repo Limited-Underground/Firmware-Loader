@@ -8,7 +8,7 @@ using System.Windows.Threading;
 
 internal static class LoaderUpdateUiTests
 {
-    internal static string RepositoryRoot = "";
+    internal static ScreenshotOutput? Output;
     internal static IReadOnlyList<(string Name, Action Run)> All { get; } = new (string, Action)[]
     {
         ("UI production panel has no choices or operational authority", () => Sta(Production)),
@@ -70,12 +70,14 @@ internal static class LoaderUpdateUiTests
     private static void Render(FrameworkElement element, string name, int width = 650, int height = 570)
     {
         var root = new Border { Background = Brushes.LightGray, Padding = new Thickness(12), Child = element, Width = width, Height = height };
-        root.Measure(new Size(width, height)); root.Arrange(new Rect(0, 0, width, height)); root.UpdateLayout(); Drain();
-        var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32); bitmap.Render(root);
-        var folder = Path.Combine(RepositoryRoot, ".private", "LUF-0009c-ui"); Directory.CreateDirectory(folder);
-        using var stream = File.Create(Path.Combine(folder, name + ".png"));
-        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); encoder.Save(stream);
-        root.Child = null;
+        try
+        {
+            root.Measure(new Size(width, height)); root.Arrange(new Rect(0, 0, width, height)); root.UpdateLayout(); Drain();
+            var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32); bitmap.Render(root);
+            using var stream = (Output ?? throw new InvalidOperationException("Screenshot output not admitted")).Open(name);
+            var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); encoder.Save(stream);
+        }
+        finally { root.Child = null; }
     }
     private static void Production()
     {
@@ -189,5 +191,55 @@ internal static class LoaderUpdateUiTests
             var child = VisualTreeHelper.GetChild(root, i); if (child is Button button) yield return button;
             foreach (var descendant in FindButtons(child)) yield return descendant;
         }
+    }
+}
+
+// Cooperative single-writer guard, not an atomic defense against hostile directory replacement.
+internal sealed class ScreenshotOutput
+{
+    private readonly string folder;
+    private ScreenshotOutput(string folder) { this.folder = folder; }
+    internal static void CheckAncestors(string path)
+    {
+        for (string? current = path; current is not null; current = Path.GetDirectoryName(current))
+        {
+            try
+            {
+                if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException("Reparse output/source boundary refused");
+            }
+            catch (FileNotFoundException) { }
+            catch (DirectoryNotFoundException) { }
+        }
+    }
+    internal static ScreenshotOutput Admit(string source, string output)
+    {
+        if (string.IsNullOrWhiteSpace(source) || !Path.IsPathFullyQualified(source) ||
+            string.IsNullOrWhiteSpace(output) || !Path.IsPathFullyQualified(output))
+            throw new IOException("Fully qualified source and output paths required");
+        source = Path.TrimEndingDirectorySeparator(Path.GetFullPath(source));
+        output = Path.TrimEndingDirectorySeparator(Path.GetFullPath(output));
+        CheckAncestors(source); CheckAncestors(output);
+        if (!Directory.Exists(source)) throw new IOException("Source directory missing");
+        var relative = Path.GetRelativePath(source, output);
+        if (relative == "." || (!Path.IsPathRooted(relative) && relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)))
+            throw new IOException("Output must be outside source tree");
+        if (File.Exists(output) || Directory.Exists(output)) throw new IOException("Output already exists");
+        var parent = Path.GetDirectoryName(output);
+        if (parent is null || !Directory.Exists(parent)) throw new IOException("Output parent must exist");
+        Directory.CreateDirectory(output);
+        CheckAncestors(output);
+        using (var marker = new FileStream(Path.Combine(output, ".loader-render-owner"), FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
+        return new ScreenshotOutput(output);
+    }
+    internal FileStream Open(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 100 ||
+            name.Any(c => !(char.IsAsciiLetterOrDigit(c) || c == '-')))
+            throw new IOException("Invalid rendering name");
+        CheckAncestors(folder);
+        var path = Path.Combine(folder, name + ".png");
+        CheckAncestors(path);
+        return new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
     }
 }

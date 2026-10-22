@@ -1,6 +1,6 @@
 # V1 remaining task plan
 
-This is the remaining-work plan for the existing V1 scope, not completion evidence or operational approval. The backlog registers IDs; the private hosted checklist records owner decisions. Reuse accepted exact-artifact evidence. Unknown defects discovered during execution require bounded child tasks, not silently expanded scope.
+This is the remaining-work plan for the existing V1 scope, not completion evidence or operational approval. The backlog retains engineering IDs, technical facts and acceptance evidence. GitHub Projects is the authority for current task scope, status, priority, dependencies and recorded owner decisions. Execution follows the portable [CONTRIBUTING.md](../CONTRIBUTING.md) contract and current owner authorization, which persists across ordinary errors and resumed work while scope and prerequisites remain valid. No mandatory six-section format or fresh approval merely because a conversation resumes is required; board status does not grant execution or publication authority. Reuse accepted exact-artifact evidence. Unknown defects discovered during execution require bounded child tasks, not silently expanded scope.
 
 Optional products and V1.5 are excluded. Each physical or release task must first freeze exact artifacts, criteria, device/host identity and recovery authority.
 

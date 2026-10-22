@@ -2,55 +2,17 @@
 
 ## Applicability and canonical authority
 
-C:\lu\AGENTS.md applies in full. This file adds Firmware-Loader-specific constraints and may not weaken the workspace rules. Stop and report any conflict.
+[CONTRIBUTING.md](CONTRIBUTING.md) owns the portable working rules, recovery priority, preservation, publication and handoff instructions. This guide adds Firmware-Loader-specific technical constraints. The mandatory six-section ceremony is retired. The machine-local workspace guide supplies approved checkout routing; those paths are not prerequisites for another clone. Another developer must establish the intended checkout's identity without recreating those paths. Report substantive conflicts without weakening the product controls.
 
-- C:\Projects\LimitedUnderground\Firmware-Loader is the canonical Firmware Loader implementation and source authority.
-- C:\Projects\LimitedUnderground\Trail\tools\windows-loader is a frozen historical predecessor. It is not a synchronized mirror, must not be edited, and must not be used to infer current Firmware-Loader behavior.
+- The approved standalone Firmware-Loader checkout is the canonical implementation and source authority; establish its identity from local routing records before work.
+- The Trail repository tools/windows-loader directory is a frozen historical predecessor. It is not a synchronized mirror, must not be edited, and must not be used to infer current Firmware-Loader behavior.
 - OpenTrail and OpenGauge own their target manifests, compatibility evidence, firmware artifacts, signer decisions, and recovery decisions.
 - Do not copy project-private records, identifiers, keys, or artifacts into this repository.
 - Any later loader implementation work must be explicitly scoped to this canonical repository.
 
-## Micro-Task Protocol (Mandatory)
+## Recovery execution
 
-You are not allowed to accept or execute large, multi-day, multi-component, or open-ended tasks.
-
-### Before any implementation
-
-1. Restate the single concrete problem in one or two sentences.
-2. State the exact measurable outcome that proves the task is done.
-3. List the exact files you expect to touch (prefer ≤ 7).
-4. List the exact validation commands / test suites that must pass.
-5. If the task cannot be finished and host-validated in one focused session (roughly 30–90 minutes of real work), you MUST refuse and propose a smaller split.
-
-### Hard task-size limits
-
-- One coherent result only.
-- Prefer changes that affect a single authority, mode, gate, or boundary.
-- No “also fix related issues” or “while we’re here”.
-- No expanding scope because the first attempt revealed a deeper problem. Record the deeper problem and stop.
-
-### Required response shape for every task
-
-1. Diagnosis (what is actually broken or missing)
-2. Proposed micro-change (exact behavior)
-3. Files that will change
-4. Exact validation steps
-5. Only after the above is accepted may you write code.
-
-### Failure handling
-
-- If a test or physical observation fails, do not immediately rewrite large amounts of code.
-- First produce a minimal diagnosis of the new failure.
-- Propose the next micro-correction.
-- Never claim a physical result from host-only evidence.
-
-### Forbidden behaviors
-
-- Accepting tasks such as “finish OT-0238c”, “make enrollment work”, “fix the radio path”, “complete the loader”, etc.
-- Generating large speculative refactors.
-- Changing multiple independent authorities in one step.
-- Treating host test success as physical acceptance.
-- Silently changing an existing mode instead of adding an explicit new mode or gate when behavior must diverge.
+Follow [CONTRIBUTING.md](CONTRIBUTING.md). Ordinary feature work is paused. Continue authorized bounded recovery with clear outcomes and appropriate validation; no fixed response format, duration/file-count refusal, or automatic stop after each task applies. Preserve existing scope and do not perform speculative refactors or silently change an existing mode. Diagnose failures before a supported correction. Physical and publication authority remain separately constrained below.
 
 ### Project-specific additions
 
@@ -86,14 +48,14 @@ You are not allowed to accept or execute large, multi-day, multi-component, or o
 
 - README.md is the stable product introduction and navigation.
 - Project architecture and project-status documents own detailed engineering facts.
-- The repository backlog owns sequencing.
-- C:\lu\.tracker\PROJECTS\Firmware-Loader.md owns only a dated workspace summary and links.
-- C:\lu\.tracker\CURRENT-FOCUS.md solely owns any active objective, blocker, next action, and acceptance criteria.
+- GitHub Projects owns current task scope, status, priority, dependencies, blockers and recorded owner decisions.
+- The repository backlog retains engineering IDs, technical scope and links to acceptance evidence; reconcile it with the current GitHub Project when selecting work.
+- Legacy workspace trackers and the retired hosted checklist are historical context, not current execution or approval gates.
 - Update only repository records whose owned facts changed; do not duplicate mutable status across files.
 
 ## Completion and publication
 
-- Follow C:\lu\AGENTS.md and C:\lu\.tracker for workspace and publication authority.
+- Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the authorized recovery scope and execution/publication rules. Local machine routing does not replace this portable policy. GitHub Projects supplies current task/status records; board status does not authorize a physical operation or publication.
 - Documentation does not authorize commit, push, PR creation, website work, deployment, or remote verification.
 - When a distinct publication operation is explicitly authorized, publish only the validated public-ready scope to the intended repository and independently verify the remote result only when that verification is separately authorized.
 - If implementation is complete but a required publication operation is unavailable or unauthorized, report implementation complete; publication pending and name the exact remaining action.

@@ -1,5 +1,9 @@
 # Limited Underground Firmware Loader — Preview
 
+## Start or resume
+
+Start or resume with [CONTRIBUTING.md](CONTRIBUTING.md) for portable working rules, preservation and handoff instructions, then [project status](docs/PROJECT_STATUS.md) and [architecture](docs/ARCHITECTURE.md). Current task authority is GitHub Projects; introductory historical test counts below are not a new validation claim.
+
 Public repository: <https://github.com/Limited-Underground/Firmware-Loader>
 
 One Windows application is intended to service both related product families:
@@ -40,7 +44,7 @@ Trail and Display are independent engineering projects. A shared customer utilit
 .\tools\Test-Loader.ps1
 ```
 
-This performs a clean warning-as-error Release build and runs 63 deterministic host groups without launching the window or accessing hardware.
+See [current validation instructions](docs/TESTING.md) for the required PowerShell runtime, full versus focused selection, isolated screenshot output and retained diagnostics. Read the actual mode and group count from the current run; historical counts do not establish coverage. Host tests do not establish physical or device acceptance.
 
 ## License and branding
 
