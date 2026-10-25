@@ -1,6 +1,14 @@
 # Project status
 
-## Current recovery baseline — October 22, 2026
+## Current working state — October 25, 2026
+
+The owner accepted the bounded source-recovery baseline on October 23. Ordinary Firmware Loader development may resume in this standalone repository under its task-specific rules. [Firmware Loader Project #3](https://github.com/orgs/Limited-Underground/projects/3) is the sole current task authority; the former Trail V1 Loader entries are archived history. Select the next outcome there, then inspect the actual branch, working changes, applicable contract and validation scope before editing.
+
+Before this documentation update, local `main` and GitHub `main` matched at `f1ebbf388c22f7eb6263aaf01cbb5d5eb893ed5c` on October 25 and the working tree was clean. Recheck those facts for the next task. The accepted recovery and prior host validation do not grant manual UI, clean-machine, signer, release, device-write or physical acceptance. Production remains inspection-only. LUF-0012 tracks the accepted bounded source recovery and retained exceptions; consult its exact Project item before changing that scope.
+
+The dated October 22 recovery checkpoints below describe their state at that time. Their earlier “work paused” and “owner acceptance open” statements are historical and do not override this accepted bounded resumption.
+
+## Historical recovery baseline — October 22, 2026
 
 [PR #11](https://github.com/Limited-Underground/Firmware-Loader/pull/11) merged as `932275461ef8d5183c399396fd0ae614a5f7e7d5`. The merged source includes the pure host preservation-binding preflight, validation output isolation and diagnostics corrections, host CI, and the corrected existing-directory relative-path refusal fixture. A fresh scoped source/Git checkpoint was independently restored and verified; restored host validation passed both Release builds with zero warnings/errors, all 189 groups and 13 WPF renderings. Earlier local-only, uncommitted and older-checkpoint observations below remain dated evidence. Maintenance remains report-only. File/tracking closeout and owner acceptance of the recovery baseline remain open; ordinary feature work stays paused. Production remains inspection-only, and no manual, clean-machine, device, release or physical acceptance is added by these results.
 

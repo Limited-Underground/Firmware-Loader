@@ -12,7 +12,7 @@
 
 ## Recovery execution
 
-Follow [CONTRIBUTING.md](CONTRIBUTING.md). Ordinary feature work is paused. Continue authorized bounded recovery with clear outcomes and appropriate validation; no fixed response format, duration/file-count refusal, or automatic stop after each task applies. Preserve existing scope and do not perform speculative refactors or silently change an existing mode. Diagnose failures before a supported correction. Physical and publication authority remain separately constrained below.
+Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source recovery on October 23, 2026; ordinary Loader development may resume under Firmware Loader Project #3 and task-specific rules. Continue authorized bounded recovery or development with clear outcomes and appropriate validation; no fixed response format, duration/file-count refusal, or automatic stop after each task applies. Preserve existing scope and do not perform speculative refactors or silently change an existing mode. Diagnose failures before a supported correction. Physical and publication authority remain separately constrained below.
 
 ### Project-specific additions
 
