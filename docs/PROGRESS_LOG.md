@@ -7,6 +7,36 @@ does not imply that acceptance occurred on its original report date. Current
 engineering state and sequencing remain in [project status](PROJECT_STATUS.md) and
 the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acceptance.
 
+## 2026-10-29
+
+### LUF-0009g Implement privileged storage policy and verify bounded Windows behavior
+
+The approved four-file machine-storage API implementation completed locally, preserving exclusive ownership, digest-only uncertainty, strict refusal and independent recovery boundaries. The full host gate passed 207 groups and 13 WPF renderings with both Release builds at zero warnings/errors and independent review. A later Windows-only gate passed 38 focused groups while reusing, not recounting, that full baseline.
+
+One separately reviewed and owner-authorized elevated fresh enrollment then passed restrictive owner/DACL and persisted-idle checks. Ordinary-token write-open probes were denied; the global parent ACL was unchanged. This is positive evidence for that one machine enrollment and refusal path, not cross-account/token-transition, adversarial race/tamper, disk-full, abrupt-power-loss, physical recovery or release acceptance. The current four source hashes still match the retained validation pins. [LUF-0009g](https://github.com/orgs/Limited-Underground/projects/3?pane=issue&itemId=286631346) remains In Progress / Ready for Review; production composition and the other Loader gates remain open. These local source and machine-validation results were not committed, merged or released. [Earlier ACL/policy evidence](https://github.com/orgs/Limited-Underground/projects/3?pane=issue&itemId=286631346).
+
+## 2026-10-28
+
+### LUF-0008b Resolve concrete target and release input evidence
+
+Prepared the reviewed production-input packet: raw-versus-blob hashes, target/layout/schema disagreement, existing signature architecture and exact unresolved release/trust/revocation/freshness/finite-adapter/recovery decisions. All 50 source-contract/documentation checks passed with independent review. Actual production values and owner acceptance remained missing; [LUF-0008b](https://github.com/orgs/Limited-Underground/projects/3?pane=issue&itemId=286631175) stayed In Progress / Needs Decision, not Done. No signer, key, device or production authority was selected. [Resolution and limits](https://github.com/orgs/Limited-Underground/projects/3?pane=issue&itemId=286631175).
+
+### LUF-0009g Validate real Windows ACL refusal regressions
+
+Three actual OS ACL refusal regressions extended the host store checks. The maintained gate passed 192 groups, 13 WPF renderings and both zero-warning/error Release builds after retained test-environment/restoration failures were corrected. This accepted isolated same-account refusal evidence did not establish machine-wide policy, cross-account isolation, power-loss durability or firmware installation. [ACL validation](https://github.com/orgs/Limited-Underground/projects/3?pane=issue&itemId=286631346).
+
+## 2026-10-25
+
+### LUF-0012 Publish accepted source-recovery handoff
+
+[PR #12](https://github.com/Limited-Underground/Firmware-Loader/pull/12) and [PR #13](https://github.com/Limited-Underground/Firmware-Loader/pull/13) published portable/current handoff corrections for the owner-accepted bounded source baseline. Approved main reached `b2f2829171f72d2c6d41be1b80a18a0de0046ef6`. This is documentation publication, not manual UI, clean-machine, signer, device-write, independent recovery or product release acceptance.
+
+## 2026-10-22
+
+### LUF-0010a Publish host preservation and validation-workflow recovery
+
+The retained [PR #6](https://github.com/Limited-Underground/Firmware-Loader/pull/6) multi-range validator and [PR #8](https://github.com/Limited-Underground/Firmware-Loader/pull/8) synthetic payload binding were followed by the pure host preservation-binding preflight, output isolation, diagnostic retention and Windows host CI in [PR #11](https://github.com/Limited-Underground/Firmware-Loader/pull/11). Fresh local and isolated restored-source validation passed all 189 groups, 13 WPF renderings and both zero-warning/error Release builds; hosted required checks passed. Independent review corrected the relative-path refusal fixture with a discriminating negative control. Components remain host-only: production release trust, real adapter, complete target-specific preservation, physical installation/recovery and package acceptance were not enabled. [Recovery evidence and limits](testing/VALIDATION-WORKFLOW-RECOVERY-2026-10-22.md).
+
 ## 2026-10-18
 
 ### Preserve private evidence outside Git
