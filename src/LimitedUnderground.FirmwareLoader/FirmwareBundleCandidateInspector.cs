@@ -1,7 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Unicode;
 
 namespace LimitedUnderground.FirmwareLoader;
 
@@ -71,6 +73,24 @@ public sealed class FirmwareBundleCandidateResult
     internal LoaderBundleInspectionContext Context { get; }
 }
 
+// Fixed, data-free reason codes for a refused candidate. A reason explains a refusal;
+// it never grants inspection, trust, admission or device authority.
+public enum FirmwareBundleCandidateRejection
+{
+    None = 0,
+    InputNotAccepted,
+    ArchiveSize,
+    ArchiveUnreadable,
+    EntrySet,
+    EntrySize,
+    EntrySizeMismatch,
+    EntryChecksumMismatch,
+    ManifestInvalid,
+    ImageLengthMismatch,
+    ImageDigestMismatch,
+    SignatureEmpty,
+}
+
 public static class FirmwareBundleCandidateInspector
 {
     public const string Schema = "firmware_bundle_candidate_v1";
@@ -96,7 +116,45 @@ public static class FirmwareBundleCandidateInspector
         "signature_algorithm",
     ];
 
+    // Existing contract: every refusal of the candidate's bytes is an InvalidDataException
+    // with a fixed message. A failure to read the caller's stream is an IOException.
     public static FirmwareBundleCandidateResult Inspect(
+        Stream input,
+        LoaderBundleInspectionContext context)
+    {
+        try
+        {
+            return InspectCore(input, context);
+        }
+        catch (CandidateRejectionException rejection)
+        {
+            throw new InvalidDataException(rejection.Message, rejection.InnerException);
+        }
+    }
+
+    // Same checks as Inspect, but a refusal of the candidate's bytes returns a fixed reason
+    // code instead of throwing. Read failures of the caller's stream still throw IOException.
+    public static bool TryInspect(
+        Stream input,
+        LoaderBundleInspectionContext context,
+        [NotNullWhen(true)] out FirmwareBundleCandidateResult? result,
+        out FirmwareBundleCandidateRejection rejection)
+    {
+        try
+        {
+            result = InspectCore(input, context);
+            rejection = FirmwareBundleCandidateRejection.None;
+            return true;
+        }
+        catch (CandidateRejectionException refused)
+        {
+            result = null;
+            rejection = refused.Reason;
+            return false;
+        }
+    }
+
+    private static FirmwareBundleCandidateResult InspectCore(
         Stream input,
         LoaderBundleInspectionContext context)
     {
@@ -105,14 +163,39 @@ public static class FirmwareBundleCandidateInspector
 
         if (!input.CanRead || !input.CanSeek)
         {
-            throw new InvalidDataException("Candidate bundle input must be readable and seekable.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.InputNotAccepted,
+                "Candidate bundle input must be readable and seekable.");
         }
 
         var originalPosition = input.Position;
         try
         {
             input.Position = 0;
-            return InspectAtStart(input, context);
+            using var source = new CandidateSourceStream(input);
+            try
+            {
+                return InspectAtStart(source, context);
+            }
+            catch (CandidateRejectionException)
+            {
+                throw;
+            }
+            catch (CandidateSourceReadException exception)
+            {
+                // A genuine read failure of the caller's stream is not a verdict on the
+                // candidate bytes. Report it as I/O so the caller can say so accurately.
+                throw new IOException("Candidate bundle could not be read.", exception.InnerException);
+            }
+            catch (Exception exception) when (IsUntrustedFormatFailure(exception))
+            {
+                // Archive-library failures caused by malformed bytes fail closed as one
+                // typed refusal instead of escaping as unrelated runtime exceptions.
+                throw Rejected(
+                    FirmwareBundleCandidateRejection.ArchiveUnreadable,
+                    "Candidate bundle is not a readable archive.",
+                    exception);
+            }
         }
         finally
         {
@@ -120,24 +203,41 @@ public static class FirmwareBundleCandidateInspector
         }
     }
 
+    private static bool IsUntrustedFormatFailure(Exception exception) =>
+        exception is InvalidDataException or IOException or InvalidOperationException or
+            NotSupportedException or ArgumentException or FormatException or
+            OverflowException or JsonException;
+
+    private static CandidateRejectionException Rejected(
+        FirmwareBundleCandidateRejection reason,
+        string message,
+        Exception? innerException = null) =>
+        new(reason, message, innerException);
+
     private static FirmwareBundleCandidateResult InspectAtStart(
         Stream input,
         LoaderBundleInspectionContext context)
     {
         if (input.Length <= 0 || input.Length > MaximumArchiveBytes)
         {
-            throw new InvalidDataException("Candidate bundle size is outside the inspection limit.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.ArchiveSize,
+                "Candidate bundle size is outside the inspection limit.");
         }
         if (LoaderProductCatalog.Find(context.ProductKey) is null ||
             context.SessionRevision == 0)
         {
-            throw new InvalidDataException("Selected product context is not accepted.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.InputNotAccepted,
+                "Selected product context is not accepted.");
         }
 
         using var archive = new ZipArchive(input, ZipArchiveMode.Read, leaveOpen: true);
         if (archive.Entries.Count != 3)
         {
-            throw new InvalidDataException("Candidate bundle must contain exactly three entries.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.EntrySet,
+                "Candidate bundle must contain exactly three entries.");
         }
 
         var entries = new Dictionary<string, ZipArchiveEntry>(StringComparer.Ordinal);
@@ -146,7 +246,9 @@ public static class FirmwareBundleCandidateInspector
             if (!entries.TryAdd(entry.FullName, entry) ||
                 entry.FullName is not (ManifestEntryName or ImageEntryName or SignatureEntryName))
             {
-                throw new InvalidDataException("Candidate bundle entry set is not accepted.");
+                throw Rejected(
+                    FirmwareBundleCandidateRejection.EntrySet,
+                    "Candidate bundle entry set is not accepted.");
             }
         }
 
@@ -164,13 +266,17 @@ public static class FirmwareBundleCandidateInspector
             label: "image");
         if (imageBytes.Length != manifest.ImageBytes)
         {
-            throw new InvalidDataException("Candidate image length does not match its manifest.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.ImageLengthMismatch,
+                "Candidate image length does not match its manifest.");
         }
 
         var imageDigest = SHA256.HashData(imageBytes);
         if (!CryptographicOperations.FixedTimeEquals(imageDigest, manifest.ImageSha256))
         {
-            throw new InvalidDataException("Candidate image digest does not match its manifest.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.ImageDigestMismatch,
+                "Candidate image digest does not match its manifest.");
         }
 
         var signature = ReadBoundedEntry(
@@ -180,7 +286,9 @@ public static class FirmwareBundleCandidateInspector
             label: "signature");
         if (signature.All(static value => value == 0))
         {
-            throw new InvalidDataException("Candidate signature is empty.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.SignatureEmpty,
+                "Candidate signature is empty.");
         }
 
         var productMatched = string.Equals(
@@ -238,6 +346,34 @@ public static class FirmwareBundleCandidateInspector
 
     private static CandidateManifest ParseCanonicalManifest(byte[] bytes)
     {
+        // JsonDocument defers some string transcoding; reject invalid UTF-8 up front.
+        if (!Utf8.IsValid(bytes))
+        {
+            throw Rejected(
+                FirmwareBundleCandidateRejection.ManifestInvalid,
+                "Candidate manifest is not valid UTF-8.");
+        }
+
+        try
+        {
+            return ParseValidUtf8Manifest(bytes);
+        }
+        catch (CandidateRejectionException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (IsUntrustedFormatFailure(exception) ||
+            exception is KeyNotFoundException)
+        {
+            throw Rejected(
+                FirmwareBundleCandidateRejection.ManifestInvalid,
+                "Candidate manifest is not accepted.",
+                exception);
+        }
+    }
+
+    private static CandidateManifest ParseValidUtf8Manifest(byte[] bytes)
+    {
         JsonDocument document;
         try
         {
@@ -252,7 +388,10 @@ public static class FirmwareBundleCandidateInspector
         }
         catch (JsonException exception)
         {
-            throw new InvalidDataException("Candidate manifest is not valid JSON.", exception);
+            throw Rejected(
+                FirmwareBundleCandidateRejection.ManifestInvalid,
+                "Candidate manifest is not valid JSON.",
+                exception);
         }
 
         using (document)
@@ -262,7 +401,9 @@ public static class FirmwareBundleCandidateInspector
                 !root.EnumerateObject().Select(static property => property.Name)
                     .SequenceEqual(CanonicalPropertyNames, StringComparer.Ordinal))
             {
-                throw new InvalidDataException("Candidate manifest is not canonical.");
+                throw Rejected(
+                    FirmwareBundleCandidateRejection.ManifestInvalid,
+                    "Candidate manifest is not canonical.");
             }
 
             var schema = RequiredString(root, "schema", 64);
@@ -285,7 +426,9 @@ public static class FirmwareBundleCandidateInspector
                 signerId.All(static value => value == '0') ||
                 signatureAlgorithm != SignatureAlgorithm)
             {
-                throw new InvalidDataException("Candidate manifest fields are not accepted.");
+                throw Rejected(
+                    FirmwareBundleCandidateRejection.ManifestInvalid,
+                    "Candidate manifest fields are not accepted.");
             }
 
             var canonical = SerializeCanonicalManifest(
@@ -297,7 +440,9 @@ public static class FirmwareBundleCandidateInspector
                 signerId);
             if (!bytes.AsSpan().SequenceEqual(canonical))
             {
-                throw new InvalidDataException("Candidate manifest is not canonically encoded.");
+                throw Rejected(
+                    FirmwareBundleCandidateRejection.ManifestInvalid,
+                    "Candidate manifest is not canonically encoded.");
             }
 
             return new CandidateManifest(
@@ -317,7 +462,9 @@ public static class FirmwareBundleCandidateInspector
     {
         if (entry.Length < minimumBytes || entry.Length > maximumBytes)
         {
-            throw new InvalidDataException($"Candidate {label} size is outside its inspection limit.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.EntrySize,
+                $"Candidate {label} size is outside its inspection limit.");
         }
 
         using var input = entry.Open();
@@ -328,7 +475,9 @@ public static class FirmwareBundleCandidateInspector
             var remaining = maximumBytes + 1L - output.Length;
             if (remaining <= 0)
             {
-                throw new InvalidDataException($"Candidate {label} expands beyond its inspection limit.");
+                throw Rejected(
+                    FirmwareBundleCandidateRejection.EntrySizeMismatch,
+                    $"Candidate {label} expands beyond its inspection limit.");
             }
 
             var read = input.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining));
@@ -343,9 +492,49 @@ public static class FirmwareBundleCandidateInspector
             output.Length > maximumBytes ||
             output.Length != entry.Length)
         {
-            throw new InvalidDataException($"Candidate {label} expanded size is not accepted.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.EntrySizeMismatch,
+                $"Candidate {label} expanded size is not accepted.");
         }
-        return output.ToArray();
+
+        // .NET does not verify ZIP CRC-32 values on read. Check them so accidental
+        // corruption of any entry, including signature bytes that are otherwise only
+        // presence-checked, is refused as archive damage.
+        var bytes = output.ToArray();
+        if (ComputeCrc32(bytes) != entry.Crc32)
+        {
+            throw Rejected(
+                FirmwareBundleCandidateRejection.EntryChecksumMismatch,
+                $"Candidate {label} failed its archive CRC-32 check.");
+        }
+        return bytes;
+    }
+
+    private static readonly uint[] Crc32Table = CreateCrc32Table();
+
+    private static uint[] CreateCrc32Table()
+    {
+        var table = new uint[256];
+        for (uint index = 0; index < table.Length; index++)
+        {
+            var value = index;
+            for (var bit = 0; bit < 8; bit++)
+            {
+                value = (value & 1) != 0 ? 0xEDB88320u ^ (value >> 1) : value >> 1;
+            }
+            table[index] = value;
+        }
+        return table;
+    }
+
+    internal static uint ComputeCrc32(ReadOnlySpan<byte> bytes)
+    {
+        var crc = 0xFFFFFFFFu;
+        foreach (var value in bytes)
+        {
+            crc = Crc32Table[(crc ^ value) & 0xFF] ^ (crc >> 8);
+        }
+        return ~crc;
     }
 
     private static string RequiredString(JsonElement root, string name, int maximumLength)
@@ -353,13 +542,17 @@ public static class FirmwareBundleCandidateInspector
         var element = root.GetProperty(name);
         if (element.ValueKind != JsonValueKind.String)
         {
-            throw new InvalidDataException("Candidate manifest field type is not accepted.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.ManifestInvalid,
+                "Candidate manifest field type is not accepted.");
         }
 
         var value = element.GetString() ?? string.Empty;
         if (value.Length == 0 || value.Length > maximumLength)
         {
-            throw new InvalidDataException("Candidate manifest text is outside its limit.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.ManifestInvalid,
+                "Candidate manifest text is outside its limit.");
         }
         return value;
     }
@@ -369,7 +562,9 @@ public static class FirmwareBundleCandidateInspector
         var element = root.GetProperty(name);
         if (!element.TryGetUInt32(out var value))
         {
-            throw new InvalidDataException("Candidate manifest integer is outside its limit.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.ManifestInvalid,
+                "Candidate manifest integer is outside its limit.");
         }
         return value;
     }
@@ -379,7 +574,9 @@ public static class FirmwareBundleCandidateInspector
         var element = root.GetProperty(name);
         if (!element.TryGetUInt64(out var value))
         {
-            throw new InvalidDataException("Candidate manifest integer is outside its limit.");
+            throw Rejected(
+                FirmwareBundleCandidateRejection.ManifestInvalid,
+                "Candidate manifest integer is outside its limit.");
         }
         return value;
     }
@@ -393,6 +590,79 @@ public static class FirmwareBundleCandidateInspector
         value[0] is >= 'a' and <= 'z' &&
         value.All(static character =>
             character is >= 'a' and <= 'z' or >= '0' and <= '9' or '_');
+
+    // Internal carrier only; public callers see InvalidDataException or a reason code.
+    private sealed class CandidateRejectionException(
+        FirmwareBundleCandidateRejection reason,
+        string message,
+        Exception? innerException)
+        : Exception(message, innerException)
+    {
+        internal FirmwareBundleCandidateRejection Reason { get; } = reason;
+    }
+
+    private sealed class CandidateSourceReadException(Exception innerException)
+        : Exception("Candidate source read failed.", innerException);
+
+    // Distinguishes failures of the caller's stream (I/O) from failures caused by the
+    // candidate's own bytes. Seeks are archive-directed and stay format failures.
+    private sealed class CandidateSourceStream(Stream inner) : Stream
+    {
+        public override bool CanRead => true;
+
+        public override bool CanSeek => true;
+
+        public override bool CanWrite => false;
+
+        public override long Length
+        {
+            get
+            {
+                try { return inner.Length; }
+                catch (Exception exception) when (IsSourceFailure(exception))
+                { throw new CandidateSourceReadException(exception); }
+            }
+        }
+
+        public override long Position
+        {
+            get
+            {
+                try { return inner.Position; }
+                catch (Exception exception) when (IsSourceFailure(exception))
+                { throw new CandidateSourceReadException(exception); }
+            }
+            set => inner.Position = value;
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            try { return inner.Read(buffer, offset, count); }
+            catch (Exception exception) when (IsSourceFailure(exception))
+            { throw new CandidateSourceReadException(exception); }
+        }
+
+        public override int Read(Span<byte> buffer)
+        {
+            try { return inner.Read(buffer); }
+            catch (Exception exception) when (IsSourceFailure(exception))
+            { throw new CandidateSourceReadException(exception); }
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => inner.Seek(offset, origin);
+
+        public override void Flush()
+        {
+        }
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException();
+
+        private static bool IsSourceFailure(Exception exception) =>
+            exception is IOException or UnauthorizedAccessException or ObjectDisposedException;
+    }
 
     private sealed record CandidateManifest(
         string ProductKey,

@@ -49,6 +49,14 @@ public sealed class LoaderBundleInspectionContext
     internal LoaderProviderOpenContext ProviderContext { get; }
 }
 
+internal enum LoaderInspectionBlock
+{
+    Unclassified,
+    SessionChanged,
+    ProductMismatch,
+    TargetNotSupported,
+}
+
 public sealed record LoaderSessionSnapshot(
     ulong Revision,
     LoaderProductFamily? Product,
@@ -446,6 +454,60 @@ public sealed class LoaderSessionController : IDisposable
                         StringComparison.Ordinal)) &&
                 !result.SignerTrusted &&
                 !result.AdmissionAllowed;
+        }
+    }
+
+    // Explains why CanPublishOfflineBundleInspection refused a result, using the same
+    // locked state. It is diagnostic only: it never grants or widens publication.
+    internal LoaderInspectionBlock ClassifyOfflineBundleInspectionBlock(
+        LoaderBundleInspectionContext context,
+        FirmwareBundleCandidateResult result)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(result);
+
+        lock (stateLock)
+        {
+            if (disposed ||
+                transitioning ||
+                selectedProduct is null ||
+                activeLease is null ||
+                activeProviderContext is null ||
+                activeTargetRules is null ||
+                !ReferenceEquals(context.OwnerToken, inspectionOwnerToken) ||
+                !ReferenceEquals(result.Context, context) ||
+                !ReferenceEquals(context.ProviderContext, activeProviderContext) ||
+                !ReferenceEquals(context.ActivationToken, activeProviderContext.ActivationToken) ||
+                context.SessionRevision != revision ||
+                result.SessionRevision != revision ||
+                !string.Equals(
+                    context.TargetRulesSourceRevision,
+                    activeTargetRules.SourceRevision,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    context.SignerTrustSourceRevision,
+                    activeSignerTrust?.SourceRevision,
+                    StringComparison.Ordinal))
+            {
+                return LoaderInspectionBlock.SessionChanged;
+            }
+
+            if (!result.ProductMatched ||
+                !string.Equals(
+                    result.ProductKey,
+                    selectedProduct.EngineeringKey,
+                    StringComparison.Ordinal))
+            {
+                return LoaderInspectionBlock.ProductMismatch;
+            }
+
+            if (!activeTargetRules.Targets.Any(target =>
+                    string.Equals(target.TargetKey, result.TargetKey, StringComparison.Ordinal)))
+            {
+                return LoaderInspectionBlock.TargetNotSupported;
+            }
+
+            return LoaderInspectionBlock.Unclassified;
         }
     }
 
