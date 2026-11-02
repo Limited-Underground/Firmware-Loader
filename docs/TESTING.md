@@ -4,7 +4,7 @@ These instructions describe the adopted validation interface. Host evidence and 
 
 ## Full gate
 
-From the intended checkout, run `./tools/Test-Loader.ps1` using PowerShell 7.5 or newer; the synthetic qualification uses 7.6.5. Windows PowerShell 5.1 is not supported by this candidate. Both LUF_UI_ONLY and LUF_STORE_ONLY must differ from the exact string `1`; the full wrapper refuses focused selection rather than resetting the caller's flags. An installed stable .NET8 SDK is required. No tool installation or online package retrieval is part of validation.
+From the intended checkout, run `./tools/Test-Loader.ps1` using PowerShell 7.5 or newer; the synthetic qualification uses 7.6.5. Windows PowerShell 5.1 is not supported by this candidate. Both LUF_UI_ONLY and LUF_STORE_ONLY must differ from the exact string `1`; the full wrapper refuses focused selection rather than resetting the caller's flags. An installed stable .NET 10 SDK is required: the wrapper selects the highest installed stable `10.0.x` SDK, consistent with the repository `global.json` (major/minor 10.0, latest feature band, no previews). No tool installation or online package retrieval is part of validation.
 
 The wrapper builds Release application/tests with existing warning-as-error project settings, then runs the exact newly built test DLL. Read the actual suite mode and count in this run's output/receipt; introductory or historical counts do not establish coverage. Host test success never establishes device, physical, signing, deployment or owner acceptance.
 

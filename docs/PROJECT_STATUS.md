@@ -8,6 +8,16 @@ After [PR #12](https://github.com/Limited-Underground/Firmware-Loader/pull/12) m
 
 The dated October 22 recovery checkpoints below describe their state at that time. Their earlier “work paused” and “owner acceptance open” statements are historical and do not override this accepted bounded resumption.
 
+## .NET 10 LTS toolchain migration candidate — November 2, 2026
+
+Branch `claude/dotnet10-lts-migration`, from `main` at `064d796` and separate from the integrity work in PR #15, is not merged. .NET 8 support ends on 2026-11-10; .NET 10 is the current LTS, supported until 2028-11-14.
+
+- Both projects now target `net10.0-windows` with WPF. There are no NuGet package references or `netstandard` targets, and NuGet sources remain cleared. A new `global.json` requires a stable 10.0 SDK (`10.0.100`, `latestFeature`, no previews). The wrapper selects the highest stable 10.0 SDK, the CI receipt validator accepts only 10.0 SDK receipts, and the workflow provisions SDK 10.0.403 with runtime 10.0.14, the October 2026 security release.
+- No source change was required. Array `Reverse()` calls in tests bind to the non-mutating .NET 10 `Enumerable` overload under C# 14. The official Windows client and server support matrices for 8.0 and 10.0 are identical. Over the same fuzz corpus, `main`'s inspector showed no new escaping exception type on .NET 10: the archive `IOException` escape no longer occurs, while the invalid-UTF-8 escape and unverified ZIP CRC-32 are unchanged and are addressed separately by PR #15.
+- Linux host validation in a cloud session used the Microsoft-signed SDK 10.0.403. Both Release builds had 0 warnings and 0 errors, and all 159 portable groups passed on runtime 10.0.14, matching the .NET 8 baseline of 159. The real `tools/Test-Loader.ps1` under PowerShell 7.6.9 selected 10.0.403 and passed both offline Release build stages; its test stage stopped only because the Windows Desktop runtime does not exist on Linux. WPF rendering and Win32 store groups run only on Windows, and the hosted gate for this change is their record.
+
+Owner decision: the LUF-0007a release boundary records `net8.0-windows`, so accepting this changes the runtime of that boundary. No device, physical, clean-machine, signing or release evidence exists.
+
 ## Historical recovery baseline — October 22, 2026
 
 [PR #11](https://github.com/Limited-Underground/Firmware-Loader/pull/11) merged as `932275461ef8d5183c399396fd0ae614a5f7e7d5`. The merged source includes the pure host preservation-binding preflight, validation output isolation and diagnostics corrections, host CI, and the corrected existing-directory relative-path refusal fixture. A fresh scoped source/Git checkpoint was independently restored and verified; restored host validation passed both Release builds with zero warnings/errors, all 189 groups and 13 WPF renderings. Earlier local-only, uncommitted and older-checkpoint observations below remain dated evidence. Maintenance remains report-only. File/tracking closeout and owner acceptance of the recovery baseline remain open; ordinary feature work stays paused. Production remains inspection-only, and no manual, clean-machine, device, release or physical acceptance is added by these results.

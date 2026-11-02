@@ -108,9 +108,9 @@ $dotnetHost = (Get-Command dotnet -CommandType Application -ErrorAction Stop | S
 $sdkInventory = & $dotnetHost --list-sdks
 if ($LASTEXITCODE -ne 0) { throw 'Unable to enumerate installed .NET SDKs.' }
 $sdk = $sdkInventory | ForEach-Object {
-    if ($_ -match '^(8\.0\.\d+) \[(.+)\]$') { [pscustomobject]@{Version=[version]$Matches[1];Root=$Matches[2]} }
+    if ($_ -match '^(10\.0\.\d+) \[(.+)\]$') { [pscustomobject]@{Version=[version]$Matches[1];Root=$Matches[2]} }
 } | Sort-Object Version -Descending | Select-Object -First 1
-if ($null -eq $sdk) { throw 'Offline Loader validation requires an installed stable .NET 8.0 SDK.' }
+if ($null -eq $sdk) { throw 'Offline Loader validation requires an installed stable .NET 10.0 SDK.' }
 $sdkCli = Join-Path (Join-Path $sdk.Root $sdk.Version.ToString()) 'dotnet.dll'
 if (-not (Test-Path -LiteralPath $sdkCli -PathType Leaf)) { throw 'Selected SDK CLI unavailable.' }
 $runId = 'LimitedUnderground.Loader.Validation.'+[Guid]::NewGuid().ToString('N')

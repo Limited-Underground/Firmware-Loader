@@ -20,7 +20,7 @@ function Get-LoaderCiReceiptResult([string]$RunRoot) {
             $started.status -cne 'started' -or $started.ui_selector -ceq '1' -or $started.store_selector -ceq '1') {
             return $result
         }
-        if ($started.sdk -cnotmatch '^8\.0\.[0-9]+$' -or $started.powershell -cnotmatch '^[0-9]+\.[0-9]+\.[0-9]+$') { return $result }
+        if ($started.sdk -cnotmatch '^10\.0\.[0-9]+$' -or $started.powershell -cnotmatch '^[0-9]+\.[0-9]+\.[0-9]+$') { return $result }
         $result.sdk = $started.sdk; $result.powershell = $started.powershell
         $result.environment_restored = $final.environment_restored -is [bool] -and $final.environment_restored
         $allPassed = $true
