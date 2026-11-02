@@ -12,7 +12,7 @@ public partial class LoaderUpdatePanel : UserControl
         InitializeComponent();
         Workflow = new LoaderUpdateWorkflow();
         timer = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.Background,
-            (_, _) => { if (Workflow.IsBusy) Workflow.Refresh(); }, Dispatcher);
+            (_, _) => Workflow.Poll(), Dispatcher);
         timer.Stop();
         Loaded += (_, _) => timer.Start();
         Unloaded += (_, _) => { timer.Stop(); Workflow.Invalidate(); };
