@@ -176,7 +176,7 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
             ? "Reconnect or choose the intended device again, review the checks, then confirm a new attempt."
             : "Review the checks before a new attempt.";
         string journal = engine.UncertaintyMarkerRetained
-            ? " The safety journal could not withdraw its record of this attempt, so recovery review will be required before another attempt."
+            ? " The safety journal could not confirm that it withdrew its record of this attempt, so another attempt may require recovery review."
             : "";
         return (heading, StopCause(engine) + " No update command was sent." + journal + " " + next);
     }
