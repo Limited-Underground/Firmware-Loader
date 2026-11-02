@@ -8,6 +8,16 @@ After [PR #12](https://github.com/Limited-Underground/Firmware-Loader/pull/12) m
 
 The dated October 22 recovery checkpoints below describe their state at that time. Their earlier “work paused” and “owner acceptance open” statements are historical and do not override this accepted bounded resumption.
 
+## Integrated .NET 10 candidate (PR #15 + PR #16) — November 2, 2026
+
+Branch `claude/net10-integration-pr15-pr16` merges the unchanged heads of PR #16 (`afa030c`) and PR #15 (`6e9e285`) into `main` at `064d796`; it is not merged. The only conflict was this file, and both entries below are kept verbatim.
+
+- Review of the no-write marker withdrawal against LUF-0009d: before its first command, the engine reaches the device only through `CurrentSelection` and the host lease, and it marks mutation possible under the command gate before the write command is invoked. Recovery markers, earlier unresolved records and any possibly submitted command are never withdrawn; a crash before the withdrawal lands leaves the marker unresolved. Two review fixes ride this branch: the adapter and lease contract now requires side-effect-free device observation and lease acquisition, because `CurrentSelection` is polled about every 100 ms while Ready; and a failed withdrawal no longer claims that recovery review "will" be required.
+- Owner decisions: the withdrawal makes the journal non-monotonic (an unresolved record can revert to the older resolved record) and removes the durable trace of a confirmed but unsent attempt. LUF-0009d revision 1 did not include this transition.
+- Linux validation on SDK 10.0.403: both Release builds had 0 warnings and 0 errors, and all 179 portable groups passed on runtime 10.0.14. The real wrapper selected 10.0.403 and passed both offline build stages; its test stage stopped because the Windows Desktop runtime does not exist on Linux. The 10 WPF rendering groups and 23 Win32 store groups run only on Windows, and the hosted gate on the integration PR is their record.
+
+No device, physical, clean-machine, signing or release evidence exists.
+
 ## .NET 10 LTS toolchain migration candidate — November 2, 2026
 
 Branch `claude/dotnet10-lts-migration`, from `main` at `064d796` and separate from the integrity work in PR #15, is not merged. .NET 8 support ends on 2026-11-10; .NET 10 is the current LTS, supported until 2028-11-14.
