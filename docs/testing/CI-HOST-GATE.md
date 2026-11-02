@@ -2,7 +2,7 @@
 
 The `Loader host validation` workflow runs `Loader full host gate` on a disposable GitHub-hosted Windows Server 2025 runner. It invokes `tools/Invoke-LoaderCi.ps1`, which invokes the existing `tools/Test-Loader.ps1` full gate. It does not use `dotnet test`, launch a manual application session, flash hardware, publish a release or deploy anything.
 
-The workflow provisions SDK 8.0.426 into its own runner directory. Provisioning uses the network; the subsequent wrapper retains the existing cleared NuGet sources and offline validation contract. The wrapper selects the highest stable .NET 8 SDK visible to that host and the sanitized receipt records the actual version. PowerShell must be at least 7.5. Hosted image updates and SDK availability can still cause a job failure; do not substitute another runtime silently to get a green result.
+The workflow provisions SDK 10.0.403 into its own runner directory. Provisioning uses the network; the subsequent wrapper retains the existing cleared NuGet sources and offline validation contract. The wrapper selects the highest stable .NET 10 SDK visible to that host and the sanitized receipt records the actual version. PowerShell must be at least 7.5. Hosted image updates and SDK availability can still cause a job failure; do not substitute another runtime silently to get a green result.
 
 ## Events and checks
 

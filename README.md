@@ -15,7 +15,7 @@ The first screen asks which system the operator is working with. That choice ope
 
 ## Current increment
 
-The repository contains a buildable .NET 8 WPF shell, a deterministic product-selection core, the host-tested version 1 product-provider lifecycle, and the migrated OpenTrail offline-inspection provider. The shell presents the exact two owner-approved product choices, keeps the full Limited Underground identity visible, and clearly states that firmware installation is unavailable.
+The repository contains a buildable .NET 10 (LTS) WPF shell, a deterministic product-selection core, the host-tested version 1 product-provider lifecycle, and the migrated OpenTrail offline-inspection provider. The shell presents the exact two owner-approved product choices, keeps the full Limited Underground identity visible, and clearly states that firmware installation is unavailable.
 
 Production registers one inspection-only provider and no signer-trust policy:
 
