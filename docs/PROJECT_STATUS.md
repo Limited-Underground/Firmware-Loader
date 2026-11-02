@@ -1,4 +1,13 @@
 # Project status
+## Current foundation freeze — November 2, 2026
+
+Product development is frozen indefinitely by current owner direction. Earlier resumption statements below are dated history. Permitted work is preservation, the [foundation reading path](FOUNDATION.md), arc42/C4/Structurizr architecture and isolated [source recovery](RECOVERY.md); no features, devices, signing, release, deployment or merge.
+
+Merged source was verified at d74832b1d2579762fc1aea0634ce409a9e4c21ec, including [PR #15](https://github.com/Limited-Underground/Firmware-Loader/pull/15), [.NET10 PR #16](https://github.com/Limited-Underground/Firmware-Loader/pull/16) and [integration #17](https://github.com/Limited-Underground/Firmware-Loader/pull/17). PR #17's full host check passed on its identified head. Current source is .NET10; old .NET8 evidence remains historical. No framework migration is part of this foundation.
+
+Current foundation task: [LUF-0012a on Project #3](https://github.com/orgs/Limited-Underground/projects/3?pane=issue&itemId=291511595), child of the retained LUF-0012 recovery acceptance. This documentation is a topic candidate until separately reviewed/merged. Older local overlays stay preserved and unintegrated. Production remains inspection-only; physical and release gates remain open.
+
+Next safe action: complete coordinated clean Windows source-recovery evidence and official model export, integrate the current allowlisted documents into the local/private handbook, and perform independent fresh-reader review. No fresh host or physical run is claimed merely by this status edit.
 
 ## Current working state — October 25, 2026
 

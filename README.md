@@ -1,5 +1,7 @@
 # Limited Underground Firmware Loader — Preview
 
+**November 2, 2026: product development is frozen indefinitely.** Current work is preservation, architecture documentation and isolated source recovery only. Start with the [foundation reading path](docs/FOUNDATION.md). Host evidence grants no device, signing, release, deployment or merge acceptance.
+
 ## Start or resume
 
 Start or resume with [CONTRIBUTING.md](CONTRIBUTING.md) for portable working rules, preservation and handoff instructions, then [project status](docs/PROJECT_STATUS.md) and [architecture](docs/ARCHITECTURE.md). Current task authority is GitHub Projects; introductory historical test counts below are not a new validation claim.
@@ -32,7 +34,7 @@ The product-bound offline inspector accepts only a readable, seekable candidate 
 
 Trail now exposes one local-file chooser for offline candidate inspection. It opens exactly one selected file read-only, adds nothing to recent-file history, retains no filename or path, and publishes only sanitized product, target, byte-count, structure, digest, signature-presence, trust, and admission fields. Results clear when the product session changes, the operator returns to the chooser, a new attempt begins, or the window closes. Display keeps this action disabled because it has no provider.
 
-There is no USB, serial, Bluetooth, WebUSB, esptool, erase, write, reset, recovery, trusted signer verification, bundle admission, or device-selection adapter in this repository.
+Production has no USB, serial, Bluetooth, WebUSB, erase/write/reset/recovery or device-selection adapter, trusted signer verification or bundle admission. Internal synthetic host fixtures exercise admission, engine and store behavior; they are not wired into the production application and grant no physical authority.
 
 ## Why a separate repository
 

@@ -12,7 +12,7 @@
 
 ## Recovery execution
 
-Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source recovery on October 23, 2026; ordinary Loader development may resume under Firmware Loader Project #3 and task-specific rules. Continue authorized bounded recovery or development with clear outcomes and appropriate validation; no fixed response format, duration/file-count refusal, or automatic stop after each task applies. Preserve existing scope and do not perform speculative refactors or silently change an existing mode. Diagnose failures before a supported correction. Physical and publication authority remain separately constrained below.
+Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source recovery on October 23, 2026. That historical development resumption is superseded by the November 2, 2026 indefinite product-development freeze. Follow the current [foundation reading path](docs/FOUNDATION.md) and CONTRIBUTING.md: only authorized preservation, documentation and isolated recovery continue. Continue authorized foundation recovery and documentation with clear outcomes and appropriate validation; no fixed response format, duration/file-count refusal, or automatic stop after each task applies. Preserve existing scope and do not perform speculative refactors or silently change an existing mode. Diagnose failures before a supported correction. Physical and publication authority remain separately constrained below.
 
 ### Project-specific additions
 

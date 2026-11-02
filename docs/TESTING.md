@@ -32,4 +32,4 @@ The output guards assume cooperative single-user execution and do not eliminate 
 
 ## Hosted CI
 
-The [GitHub host gate](testing/CI-HOST-GATE.md) describes the workflow, sanitized evidence, failure handling and acceptance limits. Hosted execution remains unverified until an actual run succeeds.
+The [GitHub host gate](testing/CI-HOST-GATE.md) describes the workflow, sanitized evidence, failure handling and acceptance limits. Hosted execution has demonstrated a successful full host gate for [PR #17](https://github.com/Limited-Underground/Firmware-Loader/pull/17) on November 2, 2026. This result applies to that tested head and hosted environment, not a new local run or clean-machine/physical acceptance. [Source recovery](RECOVERY.md) owns the fresh reconstruction result and its limits.
