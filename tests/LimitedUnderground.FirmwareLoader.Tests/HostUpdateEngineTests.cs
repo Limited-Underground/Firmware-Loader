@@ -317,7 +317,7 @@ internal static class HostUpdateEngineTests
     {
         public bool HasUnresolvedOperation { get; private set; }
         public string? RecoveryDigest { get; private set; }
-        internal bool StartWorks = true, CompleteWorks = true, ReleaseWorks = true;
+        internal bool StartWorks = true, CompleteWorks = true, ReleaseWorks = true, ReleaseThrows;
         internal Action? OnComplete, OnMarkUncertain;
         internal int Releases;
         private string? priorDigest; private bool releasable;
@@ -331,6 +331,7 @@ internal static class HostUpdateEngineTests
         // Mirrors the durable store: only a marker that replaced a resolved record is withdrawn.
         public bool ReleaseUnsubmitted()
         {
+            if (ReleaseThrows) throw new IOException("private journal path must not escape");
             if (!ReleaseWorks || !releasable || !HasUnresolvedOperation) return false;
             HasUnresolvedOperation = false; RecoveryDigest = priorDigest; releasable = false; Releases++; return true;
         }

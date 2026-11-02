@@ -10,6 +10,7 @@ internal static class HostInterruptionTests
         ("interruption disconnect after durable marker withdraws it and sends nothing", DisconnectAfterMarker),
         ("interruption cancel revoke or deadline after marker withdraws it before any command", OtherStopsAfterMarker),
         ("interruption marker withdrawal failure keeps recovery requirement", WithdrawalFailure),
+        ("interruption throwing withdrawal stays fail-closed and still releases ownership", WithdrawalThrows),
         ("interruption recovery pre-submission stop never clears the earlier marker", RecoveryKeepsMarker),
         ("interruption any possible submission keeps the marker", PossibleSubmissionKeepsMarker),
         ("connection revalidation detects disconnect reconnect and authority change while ready", Revalidation),
@@ -18,6 +19,7 @@ internal static class HostInterruptionTests
         ("status pre-submission disconnect reports no write and needs no recovery", WorkflowNoWrite),
         ("status each possible-write failure names its cause without private detail", WorkflowUnknownCauses),
         ("status pre-write refusals name their cause", WorkflowRefusalCauses),
+        ("status production workflow polling stays inert without any engine or device", ProductionPollInert),
     };
 
     private static void Require(bool value, string message) { if (!value) throw new InvalidOperationException("FAILED: " + message); }
@@ -77,6 +79,22 @@ internal static class HostInterruptionTests
         Require(f.Engine.State == HostUpdateState.NoWriteStopped && f.Adapter.Writes == 0 && f.Engine.UncertaintyMarkerRetained &&
             !f.Engine.UncertaintyMarkerReleased && f.Journal.HasUnresolvedOperation, "failed withdrawal keeps durable marker");
         Require(f.NewEngine().State == HostUpdateState.RecoveryReview, "retained marker still forces recovery review (fail closed)");
+    }
+
+    private static void WithdrawalThrows()
+    {
+        // The withdrawal runs inside the engine's finally block; an escaping exception there would
+        // skip lease disposal (ownership leaked) and misreport the stop as an uncertain outcome.
+        using var f = new Fixture();
+        f.Journal.ReleaseThrows = true;
+        f.Journal.OnMarkUncertain = () => f.Adapter.CurrentSelection = null;
+        f.Engine.RunAsync(f.Engine.Confirm()).GetAwaiter().GetResult();
+        Require(f.Engine.State == HostUpdateState.NoWriteStopped && f.Adapter.Writes == 0 && f.Adapter.Reads == 0 &&
+            f.Adapter.Boots == 0, "throwing withdrawal still reports a no-write stop");
+        Require(f.Engine.UncertaintyMarkerRetained && !f.Engine.UncertaintyMarkerReleased && f.Journal.HasUnresolvedOperation,
+            "throwing withdrawal keeps the durable marker");
+        Require(!f.Lease.Held, "ownership is released even when withdrawal throws");
+        Require(f.NewEngine().State == HostUpdateState.RecoveryReview, "retained marker still forces recovery review");
     }
 
     private static void RecoveryKeepsMarker()
@@ -261,6 +279,23 @@ internal static class HostInterruptionTests
                 !m.Detail.Contains("will be required", StringComparison.Ordinal),
                 "retained marker disclosed: " + m.Detail);
         }
+    }
+
+    private static void ProductionPollInert()
+    {
+        // The shipped panel builds the factory-less workflow and its timer calls Poll about every
+        // 100 ms. That path must never create an engine, offer a device, enable an action or throw.
+        var m = new LoaderUpdateWorkflow();
+        string heading = m.Heading, detail = m.Detail;
+        for (int i = 0; i < 1000; i++) m.Poll();
+        Require(!m.IsFixture && m.Choices.Count == 0 && m.SelectedChoice is null && !m.CanChoose && !m.CanConfirm &&
+            !m.CanStart && !m.CanCancel && !m.CanReviewRecovery && !m.IsBusy && !m.Confirmed,
+            "production polling grants no device, confirmation or operation");
+        Require(m.Heading == heading && m.Heading == "Installation unavailable" && m.Detail == detail &&
+            m.Firmware == "Firmware: no admitted file" && m.SessionLabel == "PREVIEW — inspection only",
+            "production polling leaves the inspection-only status unchanged");
+        m.Confirmed = true; m.Poll();
+        Require(!m.Confirmed && !m.CanStart, "a confirmation cannot be forced on the production workflow");
     }
 
     private sealed class ObservingAdapter(HostUpdateEngineTests.FakeAdapter inner) : IHostUpdateAdapter
