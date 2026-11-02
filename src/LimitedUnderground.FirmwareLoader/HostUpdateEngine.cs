@@ -15,6 +15,11 @@ internal sealed record HostBootResult(string ImageDigest, bool Healthy, bool Pro
 // No implementation is registered or reachable from the production UI.
 internal interface IHostUpdateAdapter
 {
+    // MUST be a passive, non-blocking read of an observation the adapter already holds. It must
+    // never open, probe, reset or otherwise touch a device (on ESP32 USB-serial boards merely
+    // opening a port can toggle DTR/RTS and reset the chip). The UI revalidates it about every
+    // 100 ms while Ready, and the engine withdraws a no-write uncertainty marker only because
+    // nothing but the three selection-bound commands below can change device state.
     HostSelection? CurrentSelection { get; }
     // Implementations MUST atomically compare expected selection/connection identity
     // at command admission, before any effect. Rechecking after a command is insufficient.
@@ -22,6 +27,8 @@ internal interface IHostUpdateAdapter
     Task<HostReadback> ReadbackAsync(HostSelection expected, uint offset, int length, CancellationToken cancellation);
     Task<HostBootResult> BootAsync(HostSelection expected, CancellationToken cancellation);
 }
+// Host-side exclusive ownership only. Acquiring or releasing it MUST NOT open or signal a
+// device; any device-affecting step belongs in a selection-bound adapter command.
 internal interface IHostOperationLease { IDisposable? TryAcquire(); }
 internal interface IHostUncertaintyJournal
 {
