@@ -70,3 +70,15 @@ The private receipt retains the full source and build artifact pins. The maintai
 Production store enrollment/root/ACL selection, other Windows accounts or unrelated tools/driver exclusion, real signer/envelope/revocation/time authority, real physical adapter/device installation and recovery, sudden power-loss durability, network filesystems, packaging/signing/deployment and enabled production UI remain unvalidated and separately gated. Inaccessible-journal tests use actual exclusive-file denial; operating-system ACL-denial, disk-full and power-cut tests were not run. Injected persistence failures are host evidence rather than measured hardware storage failures.
 
 No hardware access, enumeration, device identifiers, firmware artifacts, signing keys, public website change or V1 physical/release progress credit occurred. The owner accepted this bounded revision-1 host result. The next gate is separately approved production authority/adapter work.
+
+## Revision 2 — 2026-11-02: no-command-submitted marker withdrawal
+
+The owner accepted this revision on 2026-11-02. In addition to revision 1, `ReleaseUnsubmitted` lets the live owner withdraw its own uncertainty marker when the engine proves that no adapter command was submitted after the marker.
+
+- Conditions: update mode only; the marker replaced a resolved record; a live lease; the exact owned operation and recovery digests. The exact prior record is restored through the same verified temporary-write, flush, replace and readback commit.
+- Fail closed: a possibly submitted command, recovery mode, an earlier unresolved record, a foreign, changed or disposed binding, and a failed or throwing withdrawal all keep the marker. A crash before the replacement lands leaves it unresolved.
+- Required adapter contract: `CurrentSelection` and the host lease must be side-effect-free and must never open or signal a device. The UI revalidates the selection about every 100 ms while Ready.
+- Accepted consequences: the journal is no longer monotonic, because an unresolved record can revert to the older resolved record, and the durable trace of a confirmed but unsent attempt is removed.
+- Evidence: the `HostInterruptionTests` groups and the `HostOperationStoreTests` withdrawal groups from PR #15, as integrated by PR #17, passed the .NET 10 Windows host gate in run 41464074515.
+
+Production store enrollment, a real adapter, and physical installation and recovery remain the gates listed above.
