@@ -20,7 +20,7 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
     private readonly string root;
     private readonly Action<HostStoreStep>? checkpoint;
     private Lease? active;
-    private Record? snapshot;
+    private Record? snapshot, ownedPrior;
     private string? storeDigest, ownedOperation, ownedRecovery;
     private bool poisoned, committing;
     private sealed record Record(string StoreDigest, string State, string? OperationDigest, string? RecoveryDigest);
@@ -92,7 +92,7 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
                 if (snapshot is null) throw new IOException();
                 active = new Lease(this, file);
                 file = null;
-                ownedOperation = ownedRecovery = null;
+                ownedOperation = ownedRecovery = null; ownedPrior = null;
                 return active;
             }
             catch (Exception) { return null; }
@@ -107,11 +107,32 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
             if (active is null || poisoned || committing || ownedOperation is not null || !Hash(recoveryDigest)) return false;
             Refresh();
             if (snapshot is null || (snapshot.State == "unresolved" && snapshot.RecoveryDigest != recoveryDigest)) return false;
+            var prior = snapshot;
             var next = new Record(snapshot.StoreDigest, "unresolved",
                 Digest(RandomNumberGenerator.GetBytes(32)), recoveryDigest);
             if (!Commit(next)) return false;
             ownedOperation = next.OperationDigest;
             ownedRecovery = recoveryDigest;
+            // Only a marker that replaced a resolved record may later be withdrawn.
+            ownedPrior = prior.State == "unresolved" ? null : prior;
+            return true;
+        }
+    }
+
+    // The engine calls this only when it proves that no adapter command was submitted after
+    // this owner's marker. Restores the exact prior resolved record under the live lease, with
+    // the same verified flush/replace/readback commit. An earlier unresolved operation, a
+    // foreign or changed record, or a disposed lease is never cleared here.
+    public bool ReleaseUnsubmitted()
+    {
+        lock (gate)
+        {
+            if (active is null || poisoned || committing || ownedOperation is null || ownedPrior is null) return false;
+            Refresh();
+            if (snapshot is null || snapshot.State != "unresolved" || snapshot.OperationDigest != ownedOperation ||
+                snapshot.RecoveryDigest != ownedRecovery || snapshot.StoreDigest != ownedPrior.StoreDigest) return false;
+            if (!Commit(ownedPrior)) return false;
+            ownedOperation = ownedRecovery = null; ownedPrior = null;
             return true;
         }
     }
@@ -126,7 +147,7 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
                 snapshot.RecoveryDigest != ownedRecovery) return false;
             var next = snapshot with { State = "complete" };
             if (!Commit(next)) return false;
-            ownedOperation = ownedRecovery = null;
+            ownedOperation = ownedRecovery = null; ownedPrior = null;
             return true;
         }
     }
@@ -165,7 +186,7 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
         {
             // Replacement may have landed; never guess rollback or let this
             // uncertain instance admit a later mutation/completion.
-            poisoned = true; snapshot = null; ownedOperation = ownedRecovery = null;
+            poisoned = true; snapshot = null; ownedOperation = ownedRecovery = null; ownedPrior = null;
             return false;
         }
         finally
@@ -173,7 +194,7 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
             if (temporary is not null)
             {
                 try { File.Delete(temporary); }
-                catch (Exception) { poisoned = true; snapshot = null; ownedOperation = ownedRecovery = null; }
+                catch (Exception) { poisoned = true; snapshot = null; ownedOperation = ownedRecovery = null; ownedPrior = null; }
             }
             committing = false;
         }
@@ -200,7 +221,7 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
             storeDigest ??= record.StoreDigest;
             snapshot = record;
         }
-        catch (Exception) { poisoned = true; snapshot = null; ownedOperation = ownedRecovery = null; }
+        catch (Exception) { poisoned = true; snapshot = null; ownedOperation = ownedRecovery = null; ownedPrior = null; }
     }
 
     private byte[] ReadRecord()
@@ -281,7 +302,7 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
             lock (owner.gate)
             {
                 if (ReferenceEquals(owner.active, this))
-                { owner.active = null; owner.ownedOperation = owner.ownedRecovery = null; }
+                { owner.active = null; owner.ownedOperation = owner.ownedRecovery = null; owner.ownedPrior = null; }
                 file.Dispose();
             }
         }

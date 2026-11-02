@@ -60,11 +60,15 @@ Publication requires every binding to remain current, verified structure/digest/
 
 The archive may use stored or deflated entries. The entire candidate is limited to 20 MiB, and each entry is independently read with an exact maximum-plus-one ceiling: 4 KiB manifest, 16 MiB image, and 384-byte signature. The expanded byte count must equal ZIP metadata, so forged central-directory sizes fail closed. The caller's original stream position is restored in `finally` after success or failure.
 
-Inspection verifies structure, image length, SHA-256, and nonempty fixed-size signature presence. It has no device input, admission output, or operation authority.
+Inspection verifies structure, each entry's ZIP CRC-32, image length, SHA-256, and nonempty fixed-size signature presence. It has no device input, admission output, or operation authority.
+
+The .NET archive reader does not verify CRC-32 values, so the inspector recomputes them after each bounded read; damage to any entry, including the presence-only signature bytes, is refused rather than published. Every failure caused by the candidate's own bytes, including archive-library failures and invalid UTF-8 in the manifest, becomes one fixed `FirmwareBundleCandidateRejection` reason. `TryInspect` returns that reason; `Inspect` keeps its `InvalidDataException` contract and messages. A failure to read the caller's stream surfaces as `IOException` and is never reported as a verdict on the candidate.
 
 ## Local offline inspection surface
 
 The WPF composition root enables a single-file chooser only when `OfflineBundleInspectionAvailable` is true. The window disables recent-file registration, opens the selected file with `FileMode.Open`, `FileAccess.Read`, and `FileShare.Read`, and passes only the stream to `OfflineBundleInspectionWorkflow`. The workflow owns no path or filename field, catches malformed candidate data into fixed messages, rechecks current controller publication authority, and returns immutable sanitized display fields. The UI never displays the path or raw exception text and clears every rendered result on a new attempt, product change, chooser return, or close. Canceling the native picker leaves the prior inspected result unchanged because no new candidate was attempted.
+
+Each outcome carries a fixed `OfflineBundleInspectionStatus`. Refusals distinguish a file that could not be read, a non-candidate or unreadable archive, the archive and entry size limits, a damaged archive (CRC-32 or recorded size), a rejected manifest, an image length or SHA-256 integrity failure, an empty signature, a different product, an unsupported target, and a product-session change during inspection. The controller's diagnostic classifier only explains a publication refusal under the same lock; it never grants or widens publication. Refused outcomes still withhold product, target, generation and digest. A published outcome additionally shows the release generation and the verified image SHA-256 as lowercase hexadecimal; displaying a digest grants no signer trust or admission.
 
 ## Write direction
 

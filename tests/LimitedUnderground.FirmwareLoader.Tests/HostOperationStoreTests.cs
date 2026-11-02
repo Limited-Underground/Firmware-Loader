@@ -28,6 +28,9 @@ internal static class HostOperationStoreTests
         ("actual cancellation keeps competing processes out until command quiescence", CancelQuiescence),
         ("actual timeout keeps competing processes out until command quiescence", TimeoutQuiescence),
         ("restart recovery requires exact digest and fresh confirmation", RecoveryBinding),
+        ("pre-submission withdrawal restores exact prior record and never clears earlier uncertainty", Withdrawal),
+        ("actual engine withdraws its durable marker when stopped before any command", EngineWithdrawal),
+        ("withdrawal persistence failures stay conservative and honest on restart", WithdrawalFailures),
     };
     private static void Require(bool value, string message)
     { if (!value) throw new InvalidOperationException(message); }
@@ -307,6 +310,91 @@ internal static class HostOperationStoreTests
         recover.RunAsync(oldToken).GetAwaiter().GetResult(); Require(f.Adapter.Writes == 0, "candidate confirmation cannot authorize recovery");
         Run(recover); Require(recover.State == HostUpdateState.Recovered && !new HostOperationStore(correct.Root).HasUnresolvedOperation,
             "separate exact recovery verifies and durably completes");
+    }
+
+    private static void Withdrawal()
+    {
+        using (var t = new TemporaryStore())
+        {
+            Require(!t.Store.ReleaseUnsubmitted(), "no ownership no withdrawal");
+            byte[] idle = File.ReadAllBytes(Journal(t.Root));
+            using (var lease = t.Store.TryAcquire())
+            {
+                Require(lease is not null && !t.Store.ReleaseUnsubmitted(), "no owned marker no withdrawal");
+                Require(t.Store.MarkUncertain(Recovery) && t.Store.HasUnresolvedOperation, "marker saved");
+                Require(t.Store.ReleaseUnsubmitted() && !t.Store.HasUnresolvedOperation &&
+                    File.ReadAllBytes(Journal(t.Root)).SequenceEqual(idle), "exact idle record restored");
+                Require(!t.Store.ReleaseUnsubmitted() && !t.Store.MarkComplete(), "withdrawn operation cannot be withdrawn or completed");
+                Require(t.Store.MarkUncertain(Recovery) && t.Store.MarkComplete(), "completed operation");
+                byte[] complete = File.ReadAllBytes(Journal(t.Root));
+                Require(t.Store.MarkUncertain(Recovery) && t.Store.ReleaseUnsubmitted() &&
+                    File.ReadAllBytes(Journal(t.Root)).SequenceEqual(complete), "exact complete record restored");
+                Require(t.Store.MarkUncertain(Recovery), "operation left unresolved");
+            }
+            using (var lease = t.Store.TryAcquire())
+            {
+                Require(lease is not null && t.Store.HasUnresolvedOperation && t.Store.MarkUncertain(Recovery), "new marker over unresolved record");
+                Require(!t.Store.ReleaseUnsubmitted() && t.Store.HasUnresolvedOperation, "earlier uncertainty is never withdrawn");
+            }
+        }
+        using (var t = new TemporaryStore())
+        {
+            var held = t.Store.TryAcquire();
+            Require(held is not null && t.Store.MarkUncertain(Recovery), "marker before disposal");
+            held!.Dispose();
+            Require(!t.Store.ReleaseUnsubmitted() && t.Store.HasUnresolvedOperation, "disposed ownership cannot withdraw");
+        }
+        using (var t = new TemporaryStore())
+        using (var lease = t.Store.TryAcquire())
+        {
+            Require(lease is not null && t.Store.MarkUncertain(Recovery), "owned marker");
+            string original = File.ReadAllText(Journal(t.Root));
+            using (var json = JsonDocument.Parse(original))
+            {
+                string operation = json.RootElement.GetProperty("operationDigest").GetString()!;
+                File.WriteAllText(Journal(t.Root), original.Replace(operation, new string('D', 64), StringComparison.Ordinal));
+            }
+            Require(!t.Store.ReleaseUnsubmitted(), "foreign operation is never withdrawn");
+            File.WriteAllText(Journal(t.Root), original);
+            Require(t.Store.ReleaseUnsubmitted() && !t.Store.HasUnresolvedOperation, "exact owned operation withdrawn");
+        }
+    }
+    private static void EngineWithdrawal()
+    {
+        using var t = new TemporaryStore(); using var f = new HostUpdateEngineTests.Fixture(select: false);
+        byte[] idle = File.ReadAllBytes(Journal(t.Root)); bool disconnected = false;
+        // The device disappears just after the durable marker lands, before any command.
+        var store = new HostOperationStore(t.Root, step =>
+        { if (step == HostStoreStep.Readback && !disconnected) { disconnected = true; f.Adapter.CurrentSelection = null; } });
+        var engine = Engine(f, store); Require(engine.Select(f.Selection), "selected before disconnect"); Run(engine);
+        Require(disconnected && engine.State == HostUpdateState.NoWriteStopped && engine.UncertaintyMarkerReleased &&
+            f.Adapter.Writes == 0 && f.Adapter.Reads == 0 && f.Adapter.Boots == 0, "no command and marker withdrawn");
+        Require(File.ReadAllBytes(Journal(t.Root)).SequenceEqual(idle) && !new HostOperationStore(t.Root).HasUnresolvedOperation,
+            "durable record restored exactly");
+        f.Adapter.CurrentSelection = f.Selection;
+        var next = Engine(f, new HostOperationStore(t.Root));
+        Require(next.State == HostUpdateState.DeviceUnselected && next.Select(f.Selection), "no recovery review demanded");
+        Run(next); Require(next.State == HostUpdateState.Verified && f.Adapter.Writes == 1, "next attempt verifies");
+    }
+    private static void WithdrawalFailures()
+    {
+        foreach (var step in Enum.GetValues<HostStoreStep>())
+        {
+            using var t = new TemporaryStore(); using var f = new HostUpdateEngineTests.Fixture(select: false);
+            int commits = 0; bool disconnected = false;
+            var store = new HostOperationStore(t.Root, s =>
+            {
+                if (s == HostStoreStep.Write) commits++;
+                if (commits == 1 && s == HostStoreStep.Readback && !disconnected) { disconnected = true; f.Adapter.CurrentSelection = null; }
+                if (commits == 2 && s == step) throw new IOException("private path must not escape");
+            });
+            var engine = Engine(f, store); Require(engine.Select(f.Selection), "selected before withdrawal fault"); Run(engine);
+            Require(engine.State == HostUpdateState.NoWriteStopped && engine.UncertaintyMarkerRetained && !engine.UncertaintyMarkerReleased &&
+                f.Adapter.Writes == 0 && store.HasUnresolvedOperation && store.TryAcquire() is null,
+                "failed withdrawal keeps the poisoned instance conservative");
+            Require(new HostOperationStore(t.Root).HasUnresolvedOperation == (step != HostStoreStep.Readback),
+                "fresh view resolved only if the restoring replacement actually landed");
+        }
     }
 
     internal static bool TryRunChild(string[] args)

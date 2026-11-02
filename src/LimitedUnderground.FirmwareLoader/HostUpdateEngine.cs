@@ -2,6 +2,9 @@ namespace LimitedUnderground.FirmwareLoader;
 
 internal enum HostUpdateState { DeviceUnselected, Ready, Writing, Readback, BootWait, Verified,
     NoWriteStopped, OutcomeUnknown, RecoveryReview, Recovering, RecoveryReadback, RecoveryBootWait, Recovered }
+// Which binding check failed. Fixed codes only; they never carry device identifiers.
+internal enum HostBindingFault { None, Cancelled, AuthorityChanged, DeviceUnselected, DeviceDisconnected,
+    DeviceChanged, DeviceNotSupported, ProfileIncomplete, JournalState, CheckFailed }
 internal sealed record HostSelection(object Identity, ulong Generation, string Target, string Model, string Adapter);
 internal sealed record HostAdapterProfile(int WriteMilliseconds, int ReadMilliseconds, int BootMilliseconds,
     int TotalMilliseconds, int MaximumChunk, bool SideEffectsApproved, bool BootApproved);
@@ -12,6 +15,11 @@ internal sealed record HostBootResult(string ImageDigest, bool Healthy, bool Pro
 // No implementation is registered or reachable from the production UI.
 internal interface IHostUpdateAdapter
 {
+    // MUST be a passive, non-blocking read of an observation the adapter already holds. It must
+    // never open, probe, reset or otherwise touch a device (on ESP32 USB-serial boards merely
+    // opening a port can toggle DTR/RTS and reset the chip). The UI revalidates it about every
+    // 100 ms while Ready, and the engine withdraws a no-write uncertainty marker only because
+    // nothing but the three selection-bound commands below can change device state.
     HostSelection? CurrentSelection { get; }
     // Implementations MUST atomically compare expected selection/connection identity
     // at command admission, before any effect. Rechecking after a command is insufficient.
@@ -19,6 +27,8 @@ internal interface IHostUpdateAdapter
     Task<HostReadback> ReadbackAsync(HostSelection expected, uint offset, int length, CancellationToken cancellation);
     Task<HostBootResult> BootAsync(HostSelection expected, CancellationToken cancellation);
 }
+// Host-side exclusive ownership only. Acquiring or releasing it MUST NOT open or signal a
+// device; any device-affecting step belongs in a selection-bound adapter command.
 internal interface IHostOperationLease { IDisposable? TryAcquire(); }
 internal interface IHostUncertaintyJournal
 {
@@ -26,6 +36,10 @@ internal interface IHostUncertaintyJournal
     string? RecoveryDigest { get; }
     bool MarkUncertain(string recoveryDigest);
     bool MarkComplete();
+    // Withdraw this live owner's own marker after the engine proves no adapter command was
+    // submitted. Implementations restore the exact prior resolved record and MUST refuse when
+    // the marker replaced an earlier unresolved operation.
+    bool ReleaseUnsubmitted();
 }
 internal sealed class HostConfirmation
 {
@@ -63,6 +77,12 @@ internal sealed class HostUpdateEngine
     internal HostUpdateState State { get; private set; }
     internal string Refusal { get; private set; } = "";
     internal bool BytesVerified { get; private set; }
+    internal HostBindingFault BindingFault { get; private set; }
+    internal bool AttemptStarted => Volatile.Read(ref started) != 0;
+    // Set when a stop after the durable marker but before any command withdrew (or could not
+    // withdraw) the marker. Neither value ever applies once a command may have been submitted.
+    internal bool UncertaintyMarkerReleased { get; private set; }
+    internal bool UncertaintyMarkerRetained { get; private set; }
     internal HostReleaseManifest ReleaseManifest => release.Manifest;
 
     internal HostUpdateEngine(LoaderSessionController controller, LoaderBundleInspectionContext context,
@@ -85,8 +105,29 @@ internal sealed class HostUpdateEngine
             confirmationOwner = new object();
             selection = chosen;
             if (!CheckBinding()) { Stop("selection-or-authority"); return false; }
+            BindingFault = HostBindingFault.None;
             State = HostUpdateState.Ready;
             return true;
+        }
+    }
+
+    // Passive recheck while Ready and not started: reads only the adapter's current observation
+    // and the existing authority callbacks. A stale binding (for example a disconnected or
+    // reconnected device) revokes any issued confirmation and stops before any command.
+    // Returns true only while the engine remains Ready with a current binding.
+    internal bool Revalidate()
+    {
+        lock (commandGate)
+        {
+            if (State != HostUpdateState.Ready || Volatile.Read(ref started) != 0 ||
+                Volatile.Read(ref cancelled) != 0) return false;
+            bool current;
+            try { current = CheckBinding(); }
+            catch (Exception) { BindingFault = HostBindingFault.CheckFailed; current = false; }
+            if (current) return true;
+            confirmationOwner = new object();
+            Stop("selection-or-authority");
+            return false;
         }
     }
 
@@ -111,23 +152,35 @@ internal sealed class HostUpdateEngine
 
     private bool CheckBinding()
     {
+        var fault = ClassifyBinding();
+        if (fault != HostBindingFault.None) BindingFault = fault;
+        return fault == HostBindingFault.None;
+    }
+
+    // The same conjunction as the original single predicate, evaluated in the same order;
+    // it additionally reports which group failed first so status can be specific.
+    private HostBindingFault ClassifyBinding()
+    {
         var actual = adapter.CurrentSelection;
         long now = milliseconds();
-        bool valid = Volatile.Read(ref cancelled) == 0 && controller.CanPublishOfflineBundleInspection(context, inspection) &&
+        if (Volatile.Read(ref cancelled) != 0) return HostBindingFault.Cancelled;
+        if (!(controller.CanPublishOfflineBundleInspection(context, inspection) &&
             context.ProductKey == "opentrail" && ReferenceEquals(inspection, currentInspection()) &&
             inspection.TargetKey == release.Manifest.Target && inspection.ImageSha256 == release.Manifest.ImageDigest &&
             inspection.ImageBytes == release.Manifest.ImageLength && inspection.ReleaseGeneration == release.Manifest.Generation &&
             policy == release.Policy && policy == currentPolicy() && !policy.Revoked && now >= 0 && now < policy.ValidUntil &&
-            release.Manifest.PolicyRevision == policy.Revision && selection is not null && actual is not null &&
-            ReferenceEquals(selection.Identity, actual.Identity) && selection == actual &&
-            selection.Generation != 0 && selection.Target == "heltec_v4_bench" &&
-            selection.Model == "HTIT-WB32LAF V4.2" && selection.Adapter == "host-fixture-v1" &&
-            profile.WriteMilliseconds > 0 && profile.ReadMilliseconds > 0 && profile.BootMilliseconds > 0 &&
+            release.Manifest.PolicyRevision == policy.Revision)) return HostBindingFault.AuthorityChanged;
+        if (selection is null) return HostBindingFault.DeviceUnselected;
+        if (actual is null) return HostBindingFault.DeviceDisconnected;
+        if (!ReferenceEquals(selection.Identity, actual.Identity) || selection != actual) return HostBindingFault.DeviceChanged;
+        if (selection.Generation == 0 || selection.Target != "heltec_v4_bench" ||
+            selection.Model != "HTIT-WB32LAF V4.2" || selection.Adapter != "host-fixture-v1") return HostBindingFault.DeviceNotSupported;
+        if (!(profile.WriteMilliseconds > 0 && profile.ReadMilliseconds > 0 && profile.BootMilliseconds > 0 &&
             profile.TotalMilliseconds > 0 && profile.MaximumChunk > 0 && profile.MaximumChunk <= 65536 &&
-            profile.SideEffectsApproved && profile.BootApproved &&
-            (recovery ? journal.HasUnresolvedOperation && journal.RecoveryDigest == release.Manifest.ImageDigest
-                      : !journal.HasUnresolvedOperation || markerWritten);
-        return valid && Volatile.Read(ref cancelled) == 0;
+            profile.SideEffectsApproved && profile.BootApproved)) return HostBindingFault.ProfileIncomplete;
+        if (!(recovery ? journal.HasUnresolvedOperation && journal.RecoveryDigest == release.Manifest.ImageDigest
+                       : !journal.HasUnresolvedOperation || markerWritten)) return HostBindingFault.JournalState;
+        return Volatile.Read(ref cancelled) == 0 ? HostBindingFault.None : HostBindingFault.Cancelled;
     }
 
     private void Stop(string reason)
@@ -235,6 +288,17 @@ internal sealed class HostUpdateEngine
             // only releases ownership and can never advance the operation or a new session.
             try { commandCancellation.Cancel(); }
             catch (Exception) { Stop("adapter-cancel-failure"); }
+            // Before mutation, a stop means no update began (LUF-0009a). If the durable marker
+            // was written but no adapter command was ever submitted, withdraw this owner's own
+            // update marker while ownership is still held, so a no-write stop does not demand a
+            // recovery write. Recovery keeps its pre-existing marker; failure keeps it (fail closed).
+            if (markerWritten && !mutationPossible && !recovery)
+            {
+                bool released;
+                try { released = journal.ReleaseUnsubmitted(); }
+                catch (Exception) { released = false; }
+                if (released) UncertaintyMarkerReleased = true; else UncertaintyMarkerRetained = true;
+            }
             if (pending is { IsCompleted: false } && lease is not null)
             {
                 var retained = lease;

@@ -8,6 +8,16 @@ After [PR #12](https://github.com/Limited-Underground/Firmware-Loader/pull/12) m
 
 The dated October 22 recovery checkpoints below describe their state at that time. Their earlier “work paused” and “owner acceptance open” statements are historical and do not override this accepted bounded resumption.
 
+## Integrated .NET 10 candidate (PR #15 + PR #16) — November 2, 2026
+
+Branch `claude/net10-integration-pr15-pr16` merges the unchanged heads of PR #16 (`afa030c`) and PR #15 (`6e9e285`) into `main` at `064d796`. After owner approval, PR #16 merged into `main` as `b67cd99` on 2026-11-02, and this branch was then updated from `main` for its final gate. The only conflict was this file, and both entries below are kept verbatim.
+
+- Review of the no-write marker withdrawal against LUF-0009d: before its first command, the engine reaches the device only through `CurrentSelection` and the host lease, and it marks mutation possible under the command gate before the write command is invoked. Recovery markers, earlier unresolved records and any possibly submitted command are never withdrawn; a crash before the withdrawal lands leaves the marker unresolved. Two review fixes ride this branch: the adapter and lease contract now requires side-effect-free device observation and lease acquisition, because `CurrentSelection` is polled about every 100 ms while Ready; and a failed withdrawal no longer claims that recovery review "will" be required. The final review added regression tests for a withdrawal that throws (the marker stays, the stop is reported as retained, and the host lease is still released) and for the shipped panel's polling of the factory-less production workflow, which must stay inert.
+- Owner decisions: the withdrawal makes the journal non-monotonic (an unresolved record can revert to the older resolved record) and removes the durable trace of a confirmed but unsent attempt. LUF-0009d revision 1 did not include this transition. On 2026-11-02 the owner accepted both decisions: .NET 10 LTS as the release runtime (LUF-0007a amendment) and the no-command-submitted withdrawal under its fail-closed and side-effect-free adapter requirements (LUF-0009d revision 2).
+- Linux validation on SDK 10.0.403: both Release builds had 0 warnings and 0 errors, and all 181 portable groups passed on runtime 10.0.14. The real wrapper selected 10.0.403 and passed both offline build stages; its test stage stopped because the Windows Desktop runtime does not exist on Linux. The 10 WPF rendering groups and 23 Win32 store groups run only on Windows, and the hosted gate on the integration PR is their record.
+
+No device, physical, clean-machine, signing or release evidence exists.
+
 ## .NET 10 LTS toolchain migration candidate — November 2, 2026
 
 Branch `claude/dotnet10-lts-migration`, from `main` at `064d796` and separate from the integrity work in PR #15, is not merged. .NET 8 support ends on 2026-11-10; .NET 10 is the current LTS, supported until 2028-11-14.
@@ -17,6 +27,16 @@ Branch `claude/dotnet10-lts-migration`, from `main` at `064d796` and separate fr
 - Linux host validation in a cloud session used the Microsoft-signed SDK 10.0.403. Both Release builds had 0 warnings and 0 errors, and all 159 portable groups passed on runtime 10.0.14, matching the .NET 8 baseline of 159. The real `tools/Test-Loader.ps1` under PowerShell 7.6.9 selected 10.0.403 and passed both offline Release build stages; its test stage stopped only because the Windows Desktop runtime does not exist on Linux. WPF rendering and Win32 store groups run only on Windows, and the hosted gate for this change is their record.
 
 Owner decision: the LUF-0007a release boundary records `net8.0-windows`, so accepting this changes the runtime of that boundary. No device, physical, clean-machine, signing or release evidence exists.
+
+## Integrity and interruption hardening candidate — November 2, 2026
+
+Branch `claude/vigilant-pascal-w4pne4` (not merged) changes executable source; production remains inspection-only with no device adapter, signer trust or installation authority.
+
+- Offline inspection (production path): a fuzz probe of 44,831 truncated or corrupted candidates showed malformed bytes escaping as `InvalidOperationException` (invalid UTF-8 in the manifest, which the window's handlers did not catch) and `IOException` (reported to the operator as an unreadable file), and that corrupted signature bytes still published because ZIP CRC-32 values were not checked. Every candidate-byte failure is now a typed refusal, entry CRC-32 values are verified, source read failures stay distinct, and each refusal or block has a specific sanitized outcome. Published results show the release generation and verified SHA-256.
+- Host engine and durable store (fixture-only, not production-reachable): a stop after the durable uncertainty marker but before any adapter command now restores the exact prior resolved journal record under the live lease, so a provable no-write stop no longer forces recovery review or an unnecessary recovery write. Recovery-mode markers, any possibly submitted command and failed withdrawals keep the marker. Binding failures are classified (disconnected, changed or reconnected, unsupported, authority changed, profile, journal), a passive `Revalidate` detects them while Ready and revokes the issued confirmation, and the update workflow names the specific cause of each stop or uncertain outcome without adapter text.
+- Host validation on Linux (cloud session): Microsoft .NET SDK 8.0.426 with `EnableWindowsTargeting` built the application and test projects in Release with warnings as errors at 0 warnings and 0 errors. A session-local portable runner compiled the real sources and executed all 179 non-WPF, non-Win32 groups, including 20 new groups, which passed. The 10 WPF rendering groups and 23 Win32 store groups, 3 of them new, run only under `tools/Test-Loader.ps1` on Windows and were not executed in that session; the hosted host gate for this change is the record of that run.
+
+These are host results only. No device, physical, clean-machine, signing or release evidence exists, and no installation authority is added.
 
 ## Historical recovery baseline — October 22, 2026
 

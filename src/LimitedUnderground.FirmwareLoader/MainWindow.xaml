@@ -74,6 +74,7 @@
                             <TextBlock x:Name="InspectionSummary" TextWrapping="Wrap" Margin="0,4,0,10" />
                             <TextBlock x:Name="InspectionProduct" TextWrapping="Wrap" />
                             <TextBlock x:Name="InspectionTarget" TextWrapping="Wrap" />
+                            <TextBlock x:Name="InspectionGeneration" TextWrapping="Wrap" />
                             <TextBlock x:Name="InspectionImageBytes" TextWrapping="Wrap" />
                             <TextBlock x:Name="InspectionStructure" TextWrapping="Wrap" />
                             <TextBlock x:Name="InspectionDigest" TextWrapping="Wrap" />
