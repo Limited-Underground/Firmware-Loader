@@ -79,11 +79,11 @@ public partial class MainWindow : Window
         }
         catch (IOException)
         {
-            outcome = FileUnavailable();
+            outcome = OfflineBundleInspectionWorkflow.FileUnavailable();
         }
         catch (UnauthorizedAccessException)
         {
-            outcome = FileUnavailable();
+            outcome = OfflineBundleInspectionWorkflow.FileUnavailable();
         }
 
         PublishInspection(outcome);
@@ -95,9 +95,12 @@ public partial class MainWindow : Window
         InspectionSummary.Text = outcome.Summary;
         InspectionProduct.Text = $"Product: {outcome.ProductKey}";
         InspectionTarget.Text = $"Target: {outcome.TargetKey}";
+        InspectionGeneration.Text = $"Release generation: {outcome.ReleaseGeneration}";
         InspectionImageBytes.Text = $"Image bytes: {outcome.ImageBytes}";
         InspectionStructure.Text = $"Structure: {outcome.StructureStatus}";
-        InspectionDigest.Text = $"Image SHA-256: {outcome.ImageDigestStatus}";
+        InspectionDigest.Text = outcome.Published
+            ? $"Image SHA-256: {outcome.ImageDigestStatus} — {outcome.ImageSha256}"
+            : $"Image SHA-256: {outcome.ImageDigestStatus}";
         InspectionSignature.Text = $"Signature: {outcome.SignatureStatus}";
         InspectionTrust.Text = $"Signer trust: {outcome.SignerTrustStatus}";
         InspectionAdmission.Text = $"Installation admission: {outcome.AdmissionStatus}";
@@ -113,6 +116,7 @@ public partial class MainWindow : Window
         InspectionSummary.Text = string.Empty;
         InspectionProduct.Text = string.Empty;
         InspectionTarget.Text = string.Empty;
+        InspectionGeneration.Text = string.Empty;
         InspectionImageBytes.Text = string.Empty;
         InspectionStructure.Text = string.Empty;
         InspectionDigest.Text = string.Empty;
@@ -120,21 +124,6 @@ public partial class MainWindow : Window
         InspectionTrust.Text = string.Empty;
         InspectionAdmission.Text = string.Empty;
     }
-
-    private static OfflineBundleInspectionOutcome FileUnavailable() =>
-        new(
-            false,
-            "File unavailable",
-            "The selected file could not be opened for read-only inspection.",
-            "Not published",
-            "Not published",
-            "Not published",
-            "Not accepted",
-            "Not accepted",
-            "Not accepted",
-            "Not configured",
-            "Blocked");
-
 
     private void PublishSession()
     {

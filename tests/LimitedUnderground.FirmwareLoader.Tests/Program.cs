@@ -46,9 +46,11 @@ var tests = new (string Name, Action Run)[]
 }
 .Concat(ProviderLifecycleTests.All)
 .Concat(OfflineBundleInspectionWorkflowTests.All)
+.Concat(CandidateIntegrityTests.All)
 .Concat(OpenTrailInspectionProviderTests.All)
 .Concat(TrailReleaseAdmissionBoundaryTests.All)
 .Concat(HostUpdateEngineTests.All)
+.Concat(HostInterruptionTests.All)
 .Concat(HostOperationStoreTests.All)
 .Concat(HostPreservationPlanTests.All)
 .Concat(HostPreservationPayloadBindingTests.All)

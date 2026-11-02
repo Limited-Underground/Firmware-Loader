@@ -317,9 +317,22 @@ internal static class HostUpdateEngineTests
     {
         public bool HasUnresolvedOperation { get; private set; }
         public string? RecoveryDigest { get; private set; }
-        internal bool StartWorks = true, CompleteWorks = true;
-        internal Action? OnComplete;
-        public bool MarkUncertain(string digest) { if (!StartWorks) return false; HasUnresolvedOperation = true; RecoveryDigest = digest; return true; }
-        public bool MarkComplete() { OnComplete?.Invoke(); if (!CompleteWorks) return false; HasUnresolvedOperation = false; return true; }
+        internal bool StartWorks = true, CompleteWorks = true, ReleaseWorks = true;
+        internal Action? OnComplete, OnMarkUncertain;
+        internal int Releases;
+        private string? priorDigest; private bool releasable;
+        public bool MarkUncertain(string digest)
+        {
+            if (!StartWorks) return false;
+            releasable = !HasUnresolvedOperation; priorDigest = RecoveryDigest;
+            HasUnresolvedOperation = true; RecoveryDigest = digest; OnMarkUncertain?.Invoke(); return true;
+        }
+        public bool MarkComplete() { OnComplete?.Invoke(); if (!CompleteWorks) return false; HasUnresolvedOperation = false; releasable = false; return true; }
+        // Mirrors the durable store: only a marker that replaced a resolved record is withdrawn.
+        public bool ReleaseUnsubmitted()
+        {
+            if (!ReleaseWorks || !releasable || !HasUnresolvedOperation) return false;
+            HasUnresolvedOperation = false; RecoveryDigest = priorDigest; releasable = false; Releases++; return true;
+        }
     }
 }

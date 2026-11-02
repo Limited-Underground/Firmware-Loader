@@ -112,6 +112,15 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
         else Refresh();
         Changed();
     }
+    // Panel timer tick. While an attempt runs, refresh progress. While Ready and idle, passively
+    // revalidate the selected device and authority so a disconnect, reconnect or authority change
+    // clears the confirmation immediately rather than surfacing only when Start is pressed.
+    internal void Poll()
+    {
+        if (running) { Refresh(); return; }
+        if (engine is null || engine.State != HostUpdateState.Ready) return;
+        if (!engine.Revalidate()) { confirmed = false; Refresh(); }
+    }
     internal async Task StartAsync()
     {
         if (!CanStart || engine is null) return;
@@ -143,11 +152,11 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
             HostUpdateState.BootWait or HostUpdateState.RecoveryBootWait => ("Bytes verified — checking startup", "Waiting for the exact firmware identity and health checks. A generic heartbeat is insufficient."),
             HostUpdateState.Verified => ("Update verified", "The exact bytes, protected regions and startup checks passed for this attempt. Field and release acceptance remain separate."),
             HostUpdateState.Recovered => ("Original restored", "The independently verified original started correctly. Recovery does not make the attempted update successful."),
-            HostUpdateState.OutcomeUnknown => ("Outcome unknown — recovery review required", engine.BytesVerified ?
+            HostUpdateState.OutcomeUnknown => ("Outcome unknown — recovery review required", UnknownCause(engine) + " " + (engine.BytesVerified ?
                 "Image bytes were verified, but the final outcome is unresolved. Do not retry automatically. Review the original and recovery requirements." :
-                "The attempt may have changed the device. Do not retry, reset or restore automatically. Review the exact original and fresh recovery authority."),
+                "The attempt may have changed the device. Do not retry, reset or restore automatically. Review the exact original and fresh recovery authority.")),
             HostUpdateState.RecoveryReview => ("Recovery review required", "An earlier attempt is unresolved. Select and separately review the exact original, current device and recovery authority."),
-            HostUpdateState.NoWriteStopped => ("Stopped before writing", "No update command was submitted. Selection, file, authority or confirmation is missing, stale or cancelled. Review the checks before a new attempt."),
+            HostUpdateState.NoWriteStopped => NoWriteStatus(engine),
             _ => ("Choose the intended device", "Nothing is selected automatically. An explicit current selection and confirmation are required.")
         };
         if (uncertain && state == HostUpdateState.NoWriteStopped)
@@ -155,5 +164,64 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
         if (state == HostUpdateState.Recovered) uncertain = false;
         Changed();
     }
+    // Fixed status text chosen from the engine's fixed refusal and binding-fault codes only.
+    // No adapter, exception or device-identifying text can reach these strings.
+    private static (string Heading, string Detail) NoWriteStatus(HostUpdateEngine engine)
+    {
+        var fault = engine.BindingFault;
+        string heading = !engine.AttemptStarted && fault == HostBindingFault.DeviceDisconnected ? "Device disconnected" :
+            !engine.AttemptStarted && fault == HostBindingFault.DeviceChanged ? "Device changed — select it again" :
+            "Stopped before writing";
+        string next = fault is HostBindingFault.DeviceDisconnected or HostBindingFault.DeviceChanged or HostBindingFault.DeviceUnselected
+            ? "Reconnect or choose the intended device again, review the checks, then confirm a new attempt."
+            : "Review the checks before a new attempt.";
+        string journal = engine.UncertaintyMarkerRetained
+            ? " The safety journal could not withdraw its record of this attempt, so recovery review will be required before another attempt."
+            : "";
+        return (heading, StopCause(engine) + " No update command was sent." + journal + " " + next);
+    }
+
+    private static string StopCause(HostUpdateEngine engine) => engine.Refusal switch
+    {
+        "exclusive-owner" => "Another loader operation currently owns the device.",
+        "uncertainty-marker" => "The safety journal could not record the attempt before writing.",
+        "deadline" => "The operation time limit expired before writing started.",
+        "confirmation-consumed" => "That confirmation was already used.",
+        "adapter-cancel-failure" => "Cancellation could not be confirmed cleanly.",
+        "adapter-or-authority-failure" => "A required check failed unexpectedly.",
+        _ => FaultSentence(engine.BindingFault),
+    };
+
+    private static string UnknownCause(HostUpdateEngine engine)
+    {
+        bool bindingChanged = engine.BindingFault is not (HostBindingFault.None or HostBindingFault.Cancelled);
+        return engine.Refusal switch
+        {
+            "independent-readback" => "Readback did not match the admitted image or its protected regions.",
+            "boot-identity-health" => "Startup did not report the exact firmware identity, health and protected state.",
+            "deadline" => "The device did not finish within its time limit.",
+            "completion-marker" => "Every check passed, but the safety journal could not record completion.",
+            "adapter-or-authority-failure" => "The device connection reported a failure while a command may have been in progress.",
+            "adapter-cancel-failure" => "Cancellation could not be confirmed while a command may have been in progress.",
+            _ when bindingChanged => "The connection or authority changed during the attempt. " + FaultSentence(engine.BindingFault),
+            "cancelled" => "The attempt was cancelled after a command may have reached the device.",
+            _ => "The attempt stopped while a command may have been in progress.",
+        };
+    }
+
+    private static string FaultSentence(HostBindingFault fault) => fault switch
+    {
+        HostBindingFault.Cancelled => "The attempt was cancelled.",
+        HostBindingFault.AuthorityChanged => "The product session, inspected file or release authority changed, expired or was revoked.",
+        HostBindingFault.DeviceUnselected => "No device is selected.",
+        HostBindingFault.DeviceDisconnected => "The selected device is no longer connected.",
+        HostBindingFault.DeviceChanged => "The connected device changed or reconnected since it was selected, so the earlier selection and confirmation no longer apply.",
+        HostBindingFault.DeviceNotSupported => "The selected device does not match the exact supported model, target and adapter.",
+        HostBindingFault.ProfileIncomplete => "The adapter timing and side-effect profile is incomplete.",
+        HostBindingFault.JournalState => "An unresolved earlier attempt, or a mismatched recovery original, blocks this operation.",
+        HostBindingFault.CheckFailed => "The device or authority check could not be completed.",
+        _ => "Selection, file, authority or confirmation is missing, stale or cancelled.",
+    };
+
     private void Changed([CallerMemberName] string? ignored = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
 }
