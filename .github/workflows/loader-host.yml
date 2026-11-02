@@ -28,12 +28,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Provision .NET 8 SDK
+      - name: Provision .NET 10 SDK
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         env:
           DOTNET_INSTALL_DIR: ${{ runner.temp }}/loader-sdk
         with:
-          dotnet-version: '8.0.426'
+          dotnet-version: '10.0.403'
           cache: false
       - name: Run full host gate
         timeout-minutes: 20
