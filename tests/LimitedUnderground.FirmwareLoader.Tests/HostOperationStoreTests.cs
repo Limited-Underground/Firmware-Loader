@@ -2,6 +2,8 @@ using LimitedUnderground.FirmwareLoader;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Security.AccessControl;
+using System.Security.Principal;
 
 internal static class HostOperationStoreTests
 {
@@ -16,6 +18,12 @@ internal static class HostOperationStoreTests
         ("missing stable lock and noncanonical path aliases refuse", PathRefusal),
         ("hard-linked journal alias refuses", HardLinkRefusal),
         ("directory junction aliases refuse canonical store authority", JunctionRefusal),
+        ("journal substitution after ownership refuses first marker without repair", JournalSubstitution),
+        ("live stable lock refuses rename and deletion until release", LockNameSubstitution),
+        ("hard link introduced at readback prevents submission and retains durable uncertainty", ReadbackHardLink),
+        ("journal OS ACL denial preserves unresolved intent and refuses repair", JournalAclDenial),
+        ("stable lock OS ACL denial refuses ownership without recreation", LockAclDenial),
+        ("root OS ACL creation denial prevents durable intent commit", RootAclDenial),
         ("durable journal contains only bounded opaque digests and state", Privacy),
         ("actual host engine verifies using shared durable lease and journal", EngineComplete),
         ("journal write flush replace readback failures prevent adapter submission", StartFailures),
@@ -122,6 +130,89 @@ internal static class HostOperationStoreTests
             Require(t.Store.HasUnresolvedOperation && t.Store.TryAcquire() is null, "unknown schema and noncanonical record refuse");
         }
     }
+    private static FileSystemAccessRule DenyCurrent(FileSystemRights rights) =>
+        new(WindowsIdentity.GetCurrent().User ?? throw new InvalidOperationException("test account unavailable"),
+            rights, AccessControlType.Deny);
+
+    private static void JournalAclDenial()
+    {
+        using var t = new TemporaryStore();
+        using (var lease = t.Store.TryAcquire())
+            Require(lease is not null && t.Store.MarkUncertain(Recovery), "durable intent before denial");
+        var file = new FileInfo(Journal(t.Root));
+        var originalAcl = file.GetAccessControl(AccessControlSections.Access);
+        byte[] original = File.ReadAllBytes(file.FullName);
+        HostOperationStore? denied = null;
+        try
+        {
+            var changed = file.GetAccessControl(AccessControlSections.Access);
+            changed.AddAccessRule(DenyCurrent(FileSystemRights.ReadData)); file.SetAccessControl(changed);
+            bool osDenied = false;
+            try { _ = File.ReadAllBytes(file.FullName); }
+            catch (UnauthorizedAccessException) { osDenied = true; }
+            Require(osDenied, "actual OS journal read refusal must be exercised");
+            denied = new HostOperationStore(t.Root);
+            Require(denied.HasUnresolvedOperation && denied.RecoveryDigest is null &&
+                denied.TryAcquire() is null && !denied.MarkComplete(), "denied state never becomes success");
+        }
+        finally { originalAcl.SetSecurityDescriptorBinaryForm(originalAcl.GetSecurityDescriptorBinaryForm(), AccessControlSections.Access); file.SetAccessControl(originalAcl); }
+        Require(File.ReadAllBytes(file.FullName).AsSpan().SequenceEqual(original), "journal preserved byte-for-byte");
+        Require(denied is not null && denied.TryAcquire() is null, "denied instance cannot silently repair itself");
+        var reopened = new HostOperationStore(t.Root);
+        using var fresh = reopened.TryAcquire();
+        Require(fresh is not null && reopened.HasUnresolvedOperation && reopened.RecoveryDigest == Recovery &&
+            !reopened.MarkComplete(), "fresh open retains recovery requirement, not inherited completion authority");
+    }
+
+    private static void LockAclDenial()
+    {
+        using var t = new TemporaryStore();
+        var file = new FileInfo(Path.Combine(t.Root, HostOperationStore.LockName));
+        var originalAcl = file.GetAccessControl(AccessControlSections.Access);
+        byte[] journal = File.ReadAllBytes(Journal(t.Root));
+        try
+        {
+            var changed = file.GetAccessControl(AccessControlSections.Access);
+            changed.AddAccessRule(DenyCurrent(FileSystemRights.WriteData)); file.SetAccessControl(changed);
+            bool osDenied = false;
+            try { using var probe = new FileStream(file.FullName, FileMode.Open, FileAccess.ReadWrite, FileShare.None); }
+            catch (UnauthorizedAccessException) { osDenied = true; }
+            Require(osDenied, "actual OS stable-lock refusal must be exercised");
+            Require(t.Store.TryAcquire() is null && !t.Store.MarkUncertain(Recovery) && !t.Store.MarkComplete(),
+                "no ownership or mutation with inaccessible stable lock");
+        }
+        finally { originalAcl.SetSecurityDescriptorBinaryForm(originalAcl.GetSecurityDescriptorBinaryForm(), AccessControlSections.Access); file.SetAccessControl(originalAcl); }
+        Require(file.Exists && File.ReadAllBytes(Journal(t.Root)).AsSpan().SequenceEqual(journal),
+            "existing lock and idle journal retained");
+        using var lease = new HostOperationStore(t.Root).TryAcquire();
+        Require(lease is not null, "fresh owner may acquire after explicit ACL restoration");
+    }
+
+    private static void RootAclDenial()
+    {
+        using var t = new TemporaryStore();
+        using var lease = t.Store.TryAcquire(); Require(lease is not null, "own stable lease");
+        var directory = new DirectoryInfo(t.Root);
+        var originalAcl = directory.GetAccessControl(AccessControlSections.Access);
+        byte[] journal = File.ReadAllBytes(Journal(t.Root));
+        try
+        {
+            var changed = directory.GetAccessControl(AccessControlSections.Access);
+            changed.AddAccessRule(DenyCurrent(FileSystemRights.CreateFiles)); directory.SetAccessControl(changed);
+            bool osDenied = false;
+            string probe = Path.Combine(t.Root, "acl-create-probe");
+            try { using var created = new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None); }
+            catch (UnauthorizedAccessException) { osDenied = true; }
+            Require(osDenied, "actual OS directory create refusal must be exercised");
+            Require(!t.Store.MarkUncertain(Recovery) && t.Store.HasUnresolvedOperation && !t.Store.MarkComplete(),
+                "failed durable intent poisons caller instead of admitting work");
+        }
+        finally { originalAcl.SetSecurityDescriptorBinaryForm(originalAcl.GetSecurityDescriptorBinaryForm(), AccessControlSections.Access); directory.SetAccessControl(originalAcl); }
+        Require(File.ReadAllBytes(Journal(t.Root)).AsSpan().SequenceEqual(journal) &&
+            Directory.GetFiles(t.Root).Length == 2, "denied commit creates no journal replacement or leftover payload");
+        Require(!t.Store.MarkUncertain(Recovery), "permission restoration cannot repair poisoned caller");
+    }
+
     private static void AdmissionLockRace()
     {
         using var t = new TemporaryStore(); using var f = new HostUpdateEngineTests.Fixture(select: false);
@@ -190,6 +281,87 @@ internal static class HostOperationStoreTests
             Require(refused, "junction path cannot create a second authority");
         }
         finally { Directory.Delete(alias, recursive: false); }
+    }
+    private static void JournalSubstitution()
+    {
+        using var t = new TemporaryStore();
+        byte[] original = File.ReadAllBytes(Journal(t.Root));
+        using (var lease = t.Store.TryAcquire())
+        {
+            Require(lease is not null, "owned lease before isolated tamper");
+            using var json = JsonDocument.Parse(original);
+            string digest = json.RootElement.GetProperty("storeDigest").GetString()!;
+            string replacement = digest == new string('B', 64) ? new string('C', 64) : new string('B', 64);
+            byte[] foreign = System.Text.Encoding.UTF8.GetBytes(System.Text.Encoding.UTF8.GetString(original)
+                .Replace(digest, replacement, StringComparison.Ordinal));
+            File.WriteAllBytes(Journal(t.Root), foreign);
+            Require(!t.Store.MarkUncertain(Recovery) && !t.Store.MarkComplete() && !t.Store.ReleaseUnsubmitted(),
+                "foreign store identity cannot grant marker or completion authority");
+            Require(t.Store.HasUnresolvedOperation && t.Store.RecoveryDigest is null &&
+                File.ReadAllBytes(Journal(t.Root)).AsSpan().SequenceEqual(foreign),
+                "tampered bytes preserved and instance refuses without repair");
+            File.WriteAllBytes(Journal(t.Root), original);
+            Require(!t.Store.MarkUncertain(Recovery), "restoring bytes does not unpoison retained object");
+        }
+        Require(t.Store.TryAcquire() is null, "poison remains after lease disposal");
+        var fresh = new HostOperationStore(t.Root);
+        using var freshLease = fresh.TryAcquire();
+        Require(freshLease is not null && !fresh.HasUnresolvedOperation,
+            "fresh isolated object reads restored idle bytes without fabricated uncertainty");
+    }
+    private static void LockNameSubstitution()
+    {
+        using var t = new TemporaryStore();
+        string path = Path.Combine(t.Root, HostOperationStore.LockName), alias = Path.Combine(t.Root, "moved.lock");
+        byte[] original = File.ReadAllBytes(Journal(t.Root));
+        using (var lease = t.Store.TryAcquire())
+        {
+            Require(lease is not null, "live isolated owner");
+            foreach (Action attempt in new Action[] { () => File.Move(path, alias), () => File.Delete(path) })
+            {
+                bool refused = false;
+                try { attempt(); }
+                catch (IOException) { refused = true; }
+                catch (UnauthorizedAccessException) { refused = true; }
+                Require(refused && File.Exists(path) && !File.Exists(alias), "stable lock name remains bound while held");
+            }
+            Require(new HostOperationStore(t.Root).TryAcquire() is null &&
+                File.ReadAllBytes(Journal(t.Root)).AsSpan().SequenceEqual(original), "no second owner or journal mutation");
+        }
+        File.Move(path, alias); File.Move(alias, path);
+        using var next = t.Store.TryAcquire();
+        Require(next is not null && new FileInfo(path).Length == 0,
+            "ordinary owned fixture rename succeeds after release and lock remains usable");
+    }
+    private static void ReadbackHardLink()
+    {
+        using var t = new TemporaryStore(); using var f = new HostUpdateEngineTests.Fixture(select: false);
+        string alias = Path.Combine(t.Root, "readback-alias.json"); bool linked = false;
+        var store = new HostOperationStore(t.Root, step =>
+        {
+            if (step == HostStoreStep.Readback)
+                linked = CreateHardLink(alias, Journal(t.Root), IntPtr.Zero);
+        });
+        var engine = Engine(f, store);
+        Require(engine.Select(f.Selection), "explicit fixture selection before tamper");
+        try
+        {
+            Run(engine);
+            Require(linked && File.Exists(alias), "actual hard link introduced after atomic replacement");
+            Require(engine.State == HostUpdateState.NoWriteStopped && f.Adapter.Writes == 0 &&
+                f.Adapter.Reads == 0 && f.Adapter.Boots == 0, "failed readback prevents all adapter commands");
+            Require(store.HasUnresolvedOperation && store.RecoveryDigest is null && store.TryAcquire() is null,
+                "ambiguous instance refuses further authority");
+            byte[] durable = File.ReadAllBytes(Journal(t.Root));
+            Require(File.ReadAllBytes(alias).AsSpan().SequenceEqual(durable), "alias refers to landed journal bytes");
+            File.Delete(alias);
+            var fresh = new HostOperationStore(t.Root);
+            Require(fresh.HasUnresolvedOperation && fresh.RecoveryDigest == Recovery &&
+                File.ReadAllBytes(Journal(t.Root)).AsSpan().SequenceEqual(durable),
+                "removing owned alias reveals landed uncertainty without clearing or rewriting it");
+            Require(!store.MarkComplete() && !store.ReleaseUnsubmitted(), "retained poisoned object cannot clear uncertainty");
+        }
+        finally { if (File.Exists(alias)) File.Delete(alias); }
     }
     private static void Privacy()
     {
