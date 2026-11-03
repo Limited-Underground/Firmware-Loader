@@ -1,58 +1,35 @@
 # Limited Underground Firmware Loader — Preview
 
-## Start or resume
+**Product development is frozen indefinitely by the November 2, 2026 owner decision.** Authorized work is preservation, current documentation and isolated source recovery. The application remains **inspection-only**. Host validation never establishes physical acceptance.
 
-Start or resume with [CONTRIBUTING.md](CONTRIBUTING.md) for portable working rules, preservation and handoff instructions, then [project status](docs/PROJECT_STATUS.md) and [architecture](docs/ARCHITECTURE.md). Current task authority is GitHub Projects; introductory historical test counts below are not a new validation claim.
+Start with the [current V1 scope and reading path](docs/FOUNDATION.md), then [CONTRIBUTING](CONTRIBUTING.md) and [project status](docs/PROJECT_STATUS.md). They identify accepted requirements, implemented versus demonstrated capability, exact remaining gates and the next authorized step without private chat history. [Project #3](https://github.com/orgs/Limited-Underground/projects/3) owns live task status.
 
-Public repository: <https://github.com/Limited-Underground/Firmware-Loader>
+Public source: <https://github.com/Limited-Underground/Firmware-Loader>. The current implementation baseline is merged .NET 10 main d74832b1d2579762fc1aea0634ce409a9e4c21ec; the architecture/recovery documentation topic is not a merged release.
 
-One Windows application is intended to service both related product families:
+## What the application does today
 
-- **Limited Underground Trail**
-- **Limited Underground Display**
+One .NET 10 WPF window presents exactly **Limited Underground Trail** and **Limited Underground Display**. Choosing a product opens a revision-bound provider session and clears prior authority; it does not inspect hardware or authorize a write. Only Limited Underground Trail has a production offline-inspection provider. Limited Underground Display remains providerless and its inspection action is unavailable.
 
-The first screen asks which system the operator is working with. That choice opens a product-scoped session and clears every prior session revision. It does not inspect hardware, select firmware, or grant permission to write.
+For offline inspection, explicitly choose a product and use its local candidate picker. The application opens one selected file read-only, avoids recent-file registration and retains/displays no filename or private path. It accepts a bounded archive containing exactly manifest.json, image.bin and manifest.sig, checks canonical metadata, ZIP CRC-32, image length/SHA-256 and signature presence, and reports fixed sanitized outcomes. A product/session change, a new attempted inspection or close invalidates/clears the corresponding result; cancelling the native picker does not attempt a new candidate. See [interface details](docs/INTERFACES.md) and [runtime behavior](docs/ARCHITECTURE.md).
 
-## Current increment
+A present signature or matching digest is not release authentication. Production signer trust and admission remain false. There is no production device enumeration, USB/serial/Bluetooth adapter, write, erase, reset, boot confirmation, rollback or recovery path. Internal fake adapters and the host engine/store/validators exist for synthetic tests only; they are not production composition.
 
-The repository contains a buildable .NET 10 (LTS) WPF shell, a deterministic product-selection core, the host-tested version 1 product-provider lifecycle, and the migrated OpenTrail offline-inspection provider. The shell presents the exact two owner-approved product choices, keeps the full Limited Underground identity visible, and clearly states that firmware installation is unavailable.
+## V1 and remaining work
 
-Production registers one inspection-only provider and no signer-trust policy:
+The accepted base-V1 installation/recovery scope is Limited Underground Trail, not the optional Limited Underground Display provider. It is incomplete. [Current V1 acceptance](docs/FOUNDATION.md#existing-v1-acceptance-still-required) maps the existing signer/release, exact-device, preservation/storage, physical recovery and package/operator gates to their owning records. Do not start those tasks under the documentation freeze or infer authority from historical backlog labels.
 
-- Trail activates provider key `opentrail`, lifecycle contract version `1`, and the exact `heltec_v4_bench` target rule from OpenTrail's public target contract at commit `a327104ac67a3f5918a8b0191c96dceb05b5399b`.
-- The pinned SHA-256 of the target-contract Git blob bytes is `ec818efab9a14ce4f0900068c9474acfe2577d74e2e39fa4850f3ff0567e9776`.
-- Display still has no loader provider or accepted target manifest.
-- Signer trust, cryptographic admission, device access, and firmware installation remain unavailable.
+Each product owns its target manifests, artifacts, compatibility, signer and recovery decisions. Loader owns the common application/session and enforcement boundary. Technical keys `opentrail`, `opengauge` and existing source symbols retain their identities; public names do not become protocol keys.
 
-A provider registration is accepted only for one catalog product with an exact lowercase provider key and lifecycle contract version 1. A successful activation receives a nonzero generation and opaque lease. Switching products, returning to the chooser, or closing the application revokes and detaches that lease before closing the provider exactly once. Close/open failures, mismatched provider identities, reentrant callbacks, stale contexts, and owner disposal fail closed without exposing provider exception details or opening replacement authority.
+## Build, test and recover source
 
-Providers may supply only immutable, sanitized project-owned target rules. Signer trust is a separate application-owned registry bound to the exact product, provider, and contract version. A provider cannot declare a signer trusted or allow admission. Merely configuring signer metadata does not perform cryptographic verification.
-
-The product-bound offline inspector accepts only a readable, seekable candidate stream containing exactly `manifest.json`, `image.bin`, and `manifest.sig`. An inspection context can be minted only for an active exact provider lease and binds the controller, session revision, activation token, provider generation and identity, target-rule revision, optional trust revision, and exact context object. The inspector verifies canonical manifest encoding, bounded metadata, image length and SHA-256, and a nonempty fixed-size signature field. The caller's stream position is restored on success and failure. Publication additionally requires an exact project-owned target rule. Signer trust and admission remain false.
-
-Trail now exposes one local-file chooser for offline candidate inspection. It opens exactly one selected file read-only, adds nothing to recent-file history, retains no filename or path, and publishes only sanitized product, target, byte-count, structure, digest, signature-presence, trust, and admission fields. Results clear when the product session changes, the operator returns to the chooser, a new attempt begins, or the window closes. Display keeps this action disabled because it has no provider.
-
-There is no USB, serial, Bluetooth, WebUSB, esptool, erase, write, reset, recovery, trusted signer verification, bundle admission, or device-selection adapter in this repository.
-
-## Why a separate repository
-
-Trail and Display are independent engineering projects. A shared customer utility must not make either repository own the other project's source or evidence. This repository owns only the common application shell, session authority, provider lifecycle, and inspection boundary. Each product continues to own its exact target manifests, artifacts, compatibility proof, and recovery rules.
-
-## Validate
+From the intended Windows checkout with PowerShell 7.5+ and the declared stable .NET 10 SDK/Desktop prerequisites:
 
 ```powershell
 .\tools\Test-Loader.ps1
 ```
 
-See [current validation instructions](docs/TESTING.md) for the required PowerShell runtime, full versus focused selection, isolated screenshot output and retained diagnostics. Read the actual mode and group count from the current run; historical counts do not establish coverage. Host tests do not establish physical or device acceptance.
+[Testing](docs/TESTING.md) gives the practical full/focused commands, selector rules and retained diagnostics; its [documentation-only checks](docs/TESTING.md#documentation-checks) run without the SDK or an application build. [Recovery](docs/RECOVERY.md) pins source/toolchain/reference evidence and fresh reconstruction steps. Existing exact-source hosted Windows validation passed; documentation-only changes reuse it and do not claim a new local build, numerical test count, clean-machine or physical result.
 
-## License and branding
+## License and names
 
-The source code is licensed under the [Apache License 2.0](LICENSE). The license does not grant permission to use the Limited Underground names or associated branding as trademarks or to imply endorsement. See [BRANDING.md](BRANDING.md).
-
-## Remaining gates
-
-1. Add a Display provider only after OpenGauge owns an accepted target manifest and compatibility boundary.
-2. Define and validate the signed-release trust, revocation, and release-policy boundary before enabling admission.
-3. Add real signer verification, protected revocation, exact-device authority, writer, readback, boot confirmation, rollback, and recovery one gate at a time.
-4. Perform physical write and recovery acceptance independently for every claimed target before removing **Preview** or **inspection only**.
+Source is under [Apache License 2.0](LICENSE). [BRANDING](BRANDING.md) retains name/trademark restrictions and the working-name clearance limit. [Third-party records](docs/THIRD_PARTY.md) distinguish platform/tool dependencies, provenance and unaccepted distribution work. No installer, signed production release or legal clearance is established by this Preview documentation.

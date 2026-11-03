@@ -2,21 +2,21 @@
 
 ## Applicability and canonical authority
 
-[CONTRIBUTING.md](CONTRIBUTING.md) owns the portable working rules, recovery priority, preservation, publication and handoff instructions. This guide adds Firmware-Loader-specific technical constraints. The mandatory six-section ceremony is retired. The machine-local workspace guide supplies approved checkout routing; those paths are not prerequisites for another clone. Another developer must establish the intended checkout's identity without recreating those paths. Report substantive conflicts without weakening the product controls.
+[CONTRIBUTING.md](CONTRIBUTING.md) owns the portable working rules, recovery priority, preservation, publication and handoff instructions. This guide adds Firmware-Loader-specific technical constraints. The mandatory six-section ceremony is retired. The machine-local workspace guide supplies approved checkout routing; those paths are not prerequisites for another clone. Local skills are optional routing helpers, not product/task authority; stale development/naming/path instructions cannot override current CONTRIBUTING, the freeze, accepted contracts or owner restrictions. No user-local skill or model memory is needed to follow the repository reading path. Another developer must establish the intended checkout's identity without recreating those paths. Report substantive conflicts without weakening the product controls.
 
 - The approved standalone Firmware-Loader checkout is the canonical implementation and source authority; establish its identity from local routing records before work.
 - The Trail repository tools/windows-loader directory is a frozen historical predecessor. It is not a synchronized mirror, must not be edited, and must not be used to infer current Firmware-Loader behavior.
-- OpenTrail and OpenGauge own their target manifests, compatibility evidence, firmware artifacts, signer decisions, and recovery decisions.
+- Limited Underground Trail and Limited Underground Display own their target manifests, compatibility evidence, firmware artifacts, signer decisions, and recovery decisions. Preserve technical keys, source symbols and historical evidence names.
 - Do not copy project-private records, identifiers, keys, or artifacts into this repository.
 - Any later loader implementation work must be explicitly scoped to this canonical repository.
 
 ## Recovery execution
 
-Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source recovery on October 23, 2026; ordinary Loader development may resume under Firmware Loader Project #3 and task-specific rules. Continue authorized bounded recovery or development with clear outcomes and appropriate validation; no fixed response format, duration/file-count refusal, or automatic stop after each task applies. Preserve existing scope and do not perform speculative refactors or silently change an existing mode. Diagnose failures before a supported correction. Physical and publication authority remain separately constrained below.
+Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source recovery on October 23, 2026. That historical development resumption is superseded by the November 2, 2026 indefinite product-development freeze. Follow the current [foundation reading path](docs/FOUNDATION.md) and CONTRIBUTING.md: only authorized preservation, documentation and isolated recovery continue. Continue authorized foundation recovery and documentation with clear outcomes and appropriate validation; no fixed response format, duration/file-count refusal, or automatic stop after each task applies. Preserve existing scope and do not perform speculative refactors or silently change an existing mode. Diagnose failures before a supported correction. Physical and publication authority remain separately constrained below.
 
 ### Project-specific additions
 
-- Prefer adding an explicit new mode or gate over silently changing an existing one.
+- During explicitly authorized future product work, preserve existing modes; prefer an explicit new mode or gate over silently changing one. The current freeze grants no such implementation work.
 - After any physical failure, the next task is diagnosis only until the root cause is isolated.
 - Host success never equals physical acceptance. Always say so explicitly.
 - Keep original recovery, retained modes, and new modes clearly separated; never let cleanup-only or historical bytes become accepted originals.
@@ -26,7 +26,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source rec
 - The public working name is Limited Underground Firmware Loader — Preview, pending attorney clearance.
 - The first interaction presents exactly Limited Underground Trail and Limited Underground Display as provider choices.
 - Engineering keys remain opentrail and opengauge; public names never become protocol or compatibility identifiers.
-- Selecting Trail or Display selects only a provider namespace. It never grants bundle, signer, device, write, erase, reset, reboot, rollback, recovery, or eFuse authority.
+- Selecting Limited Underground Trail or Limited Underground Display selects only a provider namespace. It never grants bundle, signer, device, write, erase, reset, reboot, rollback, recovery, or eFuse authority.
 - Until every target-specific physical-write and recovery gate is separately accepted, the application remains inspection-only and must not expose, advertise, or imply firmware-installation authority.
 
 ## Fail-closed safety and privacy
@@ -39,7 +39,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source rec
 
 ## Validation
 
-- After any source change, run tools\Test-Loader.ps1.
+- After executable application-source changes, run tools\Test-Loader.ps1. For current documentation/checker-only changes, run the documentation validator and its negative fixtures from TESTING.md; reuse unchanged application-build evidence. The full host gate also runs those documentation checks before any SDK/build work.
 - Warning-as-error builds and deterministic core tests must pass before a change is described as validated.
 - Keep source, build, test, package, clean-machine, signing, hardware-write, recovery, and production evidence separate.
 - Future artifacts must record source identity, target manifest, signer, exact bytes, SHA-256, timestamp, and validation layer.
@@ -56,7 +56,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source rec
 ## Completion and publication
 
 - Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the authorized recovery scope and execution/publication rules. Local machine routing does not replace this portable policy. GitHub Projects supplies current task/status records; board status does not authorize a physical operation or publication.
-- Documentation does not authorize commit, push, PR creation, website work, deployment, or remote verification.
-- When a distinct publication operation is explicitly authorized, publish only the validated public-ready scope to the intended repository and independently verify the remote result only when that verification is separately authorized.
+- Documentation alone grants no commit, push, PR, merge, website or deployment authority. Apply the current owner-authorized target/ref/scope and its review/release conditions.
+- Authorized publication includes routine read-only verification of its exact destination/result unless the owner restricts that access. Publish only reviewed public-ready scope; do not request repeated consent for that routine readback or bypass required checks. Independent verification does not automatically require another agent.
 - If implementation is complete but a required publication operation is unavailable or unauthorized, report implementation complete; publication pending and name the exact remaining action.
 - Never publish private project material, sensitive device information, or unsupported installation claims.

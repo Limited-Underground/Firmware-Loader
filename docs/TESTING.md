@@ -2,12 +2,42 @@
 
 These instructions describe the adopted validation interface. Host evidence and remaining qualification limits are recorded in project status; dated release evidence remains historical.
 
+## Documentation checks
+
+For current-documentation and documentation-tooling changes, run these offline PowerShell 7.5+ standard-library checks from the intended checkout; they require no SDK, network, package installation or product execution:
+
+```powershell
+.\tools\Test-LoaderDocumentation.ps1
+.\tools\Test-LoaderDocumentation.Tests.ps1
+```
+
+The [validator](../tools/Test-LoaderDocumentation.ps1) and [negative fixtures](../tools/Test-LoaderDocumentation.Tests.ps1) are repository-local tooling. The validator derives its current-page selection from [Foundation's reading route](FOUNDATION.md#reading-route-and-reusable-procedures), checks inline local file/heading references, and compares declared runtime/SDK/source/target/model identities with the existing owning Recovery rows, project/global/workflow configuration, embedded target constants and UTF-8/LF model bytes. It also detects selected known freeze/inspection/publication contradictions and transient PR-based next actions. It does not create a second status authority.
+
+A section headed exactly `## Retained history` ends a document's current selection. Links to historical source/evidence remain checked, but their original bodies are not rewritten or treated as current permissions. The negative fixtures replace input text in memory; they mutate no repository files. They demonstrate refusal of representative missing/escaping/broken references, source/tool/artifact mismatches and authority contradictions, plus acceptance of explicit history and date-only changes.
+
+These are bounded consistency checks, not a Markdown implementation or proof of every paraphrase. They do not authenticate the declared Git commit or hosted artifact, contact external links/private Projects, infer freshness from timestamps, prove architecture truth, approve a task/ref, confer signer/device authority or establish production/physical acceptance. Fresh human/source review remains necessary for changed claims and access/owner decisions. Cooperative filesystem assumptions still apply.
+
+The full Test-Loader.ps1 gate runs the validator and its fixtures before SDK enumeration, output allocation and the unchanged application/test build stages. A failed documentation preflight stops that invocation; there is no skip flag added to the full gate. An existing application-build result remains evidence for its original inputs, not proof that later gateway/checker code ran. Use the focused checks above for a documentation-only delta; do not repeat a completed host build merely to refresh a date.
 ## Full gate
 
-From the intended checkout, run `./tools/Test-Loader.ps1` using PowerShell 7.5 or newer; the synthetic qualification uses 7.6.5. Windows PowerShell 5.1 is not supported by this candidate. Both LUF_UI_ONLY and LUF_STORE_ONLY must differ from the exact string `1`; the full wrapper refuses focused selection rather than resetting the caller's flags. An installed stable .NET 10 SDK is required: the wrapper selects the highest installed stable `10.0.x` SDK, consistent with the repository `global.json` (major/minor 10.0, latest feature band, no previews). No tool installation or online package retrieval is part of validation.
+From the intended checkout, run `./tools/Test-Loader.ps1` using PowerShell 7.5 or newer; the older synthetic qualification used 7.6.5, while the November 2 hosted receipt records 7.6.9. Windows PowerShell 5.1 is not supported by this candidate. Both LUF_UI_ONLY and LUF_STORE_ONLY must differ from the exact string `1`; the full wrapper refuses focused selection rather than resetting the caller's flags. An installed stable .NET 10 SDK is required: the wrapper selects the highest installed stable `10.0.x` SDK, consistent with the repository `global.json` (major/minor 10.0, latest feature band, no previews). No tool installation or online package retrieval is part of validation.
 
-The wrapper builds Release application/tests with existing warning-as-error project settings, then runs the exact newly built test DLL. Read the actual suite mode and count in this run's output/receipt; introductory or historical counts do not establish coverage. Host test success never establishes device, physical, signing, deployment or owner acceptance.
+The wrapper builds Release application/tests with existing warning-as-error project settings, then runs the exact newly built test DLL. For a local run read the actual suite mode and count in its retained output; the hosted sanitized receipt reports full mode/stage success without a numeric count. Introductory or historical counts do not establish current coverage. Host test success never establishes device, physical, signing, deployment or owner acceptance.
 
+## Practical full invocation
+
+Use an isolated PowerShell 7.5+ process from the intended source checkout. Choose an approved task-owned temporary parent outside source, create it first and set both TEMP/TMP to it. Do not use another task's output or an existing validation-run directory. In that isolated caller:
+
+```powershell
+# TEMP/TMP already point at the existing task-owned temporary parent.
+$env:LUF_UI_ONLY = '0'
+$env:LUF_STORE_ONLY = '0'
+.\tools\Test-Loader.ps1
+```
+
+This one command builds both Release projects and executes the freshly built test DLL; no separate dotnet run is needed. It selects the highest installed stable10.0 SDK and creates fresh NuGet packages, CLI home, artifacts and evidence directories. The installed SDK/Desktop packs are declared prerequisites, not cached project input. NuGet sources are cleared; the source has no external PackageReference. A missing prerequisite is a blocker to diagnose, not permission to add a feed or migrate the runtime.
+
+For a retained local run inspect ownership.json, started.json, all three stage JSON/log pairs and final.json. Require app-build/test-build/tests native exit0, final status passed, suite full and environment_restored=true; record the actual output count/renderings and artifact hashes. The script restores the variables it changes, while this isolated caller owns its chosen TEMP/TMP and selector settings. A CI sanitized summary deliberately omits raw paths/logs/counts; it must not be described as local raw evidence.
 ## Direct focused runner
 
 The ordinary runner takes exactly two arguments after its DLL: source root and a new screenshot directory outside the source tree. The screenshot parent must already exist; the child must not. Example argument shape:
@@ -32,4 +62,14 @@ The output guards assume cooperative single-user execution and do not eliminate 
 
 ## Hosted CI
 
-The [GitHub host gate](testing/CI-HOST-GATE.md) describes the workflow, sanitized evidence, failure handling and acceptance limits. Hosted execution remains unverified until an actual run succeeds.
+The [GitHub host gate](testing/CI-HOST-GATE.md) describes the workflow, sanitized evidence, failure handling and acceptance limits. Hosted execution has demonstrated a successful full host gate for [PR #17](https://github.com/Limited-Underground/Firmware-Loader/pull/17) on November 2, 2026. This result applies to that tested head and hosted environment, not a new local run or clean-machine/physical acceptance. [Source recovery](RECOVERY.md) owns the fresh reconstruction result and its limits.
+
+## Proven troubleshooting and limits
+
+- Older dotnet run/artifacts-path launch failure: use the maintained wrapper's exact newly built DLL invocation; do not revive the retired command from September evidence.
+- Focused selectors accidentally set: the full wrapper refuses them. Run in the isolated caller above, not a UI-only/store-only process presented as a full pass.
+- Damaged candidate bytes versus stream I/O: CRC/UTF-8/archive/canonical/digest failures map to fixed candidate refusals; a caller-stream read failure remains an I/O failure. Preserve that distinction rather than exposing raw exception text.
+- Stale session/device or uncertain operation: source/fixture checks revoke stale authority and retain uncertainty after any possible command. The accepted no-command-submitted withdrawal is narrow; it never turns a submitted/unknown outcome into success.
+- Host output protection assumes cooperating execution. It is not defense against hostile concurrent filesystem replacement or proof of production ACL/enrollment.
+
+Source ownership and the associated tests are linked from [Architecture](ARCHITECTURE.md); current V1 gaps are selected once in [Foundation](FOUNDATION.md). Reuse valid unchanged evidence and diagnose a relevant failing transition before adding a check or running a broader suite.

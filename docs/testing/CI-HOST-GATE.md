@@ -6,7 +6,7 @@ The workflow provisions SDK 10.0.403 into its own runner directory. Provisioning
 
 ## Events and checks
 
-Pull requests targeting main, pushes to main and manual dispatch trigger the gate. Normal pull requests use GitHub's event checkout, including its merge revision; the result records that tested commit, not necessarily the branch head. There are no path filters, secret inputs, package caches, deployment credentials or write permissions. Checkout does not persist credentials. Dependencies use full commit pins. Batch related changes into the existing PR to follow the shared CI cadence; do not push every small edit separately.
+Pull requests targeting main, pushes to main and manual dispatch trigger the gate. Normal pull requests use GitHub's event checkout, including its merge revision; the result records that tested commit, not necessarily the branch head. There are no path filters, secret inputs, package caches, deployment credentials or write permissions. Checkout does not persist credentials. Dependencies use full commit pins. Batch related changes when useful under CONTRIBUTING.md; there is no scheduled morning window or one-PR-per-day limit. Publication and ready/merge authority remain separate.
 
 The host step has a 20-minute timeout within a 30-minute job. Failure is not converted into success with continue-on-error. The script requires a successful wrapper return and matching ownership/start/final receipts, full-suite selection, all three successful stage receipts and restored environment. A partial receipt is never a pass. These consistency checks are not protection against a malicious contributor changing the workflow or verifier; review remains necessary.
 

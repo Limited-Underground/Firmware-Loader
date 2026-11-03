@@ -1,4 +1,15 @@
+# Host preservation binding to fixture admission: current selection
+
+The pure host consistency checker is implemented in [HostPreservationBindingPreflight.cs](../src/LimitedUnderground.FirmwareLoader/HostPreservationBindingPreflight.cs) and covered by [its deterministic tests](../tests/LimitedUnderground.FirmwareLoader.Tests/HostPreservationBindingPreflightTests.cs). Its result is FixtureConsistent or a typed refusal; it performs no I/O, signature re-verification, operational token issuance or engine integration. [Interfaces](INTERFACES.md) selects its current immutable range/payload/policy boundary. [Foundation](FOUNDATION.md) selects remaining existing V1 acceptance.
+
+The accepted design rules and original planned cases below remain reference material; wording about a future implementation does not reopen completed work. Old morning/one-PR-per-day rules are retired by [CONTRIBUTING](../CONTRIBUTING.md#ci-and-publication-timing). Current task/publication/ready authority comes from the owning Project and owner scope, not old design-task prose. Product development remains frozen, production inspection-only, and host success is never physical acceptance.
+
+## Retained history
+
+Original design/status record follows unchanged. Its historical task/board links, group counts, consumed permissions and publication rules describe that record, not current execution. This history does not obsolete accepted validation rules or replace their implemented source/tests.
+
 # Host preservation binding to fixture admission: preflight contract
+
 
 Status: original design contract dated October 19, 2026; implementation status reconciled October 22, 2026. The pure host checker is now implemented in [HostPreservationBindingPreflight.cs](../src/LimitedUnderground.FirmwareLoader/HostPreservationBindingPreflight.cs), with 24 registered deterministic groups in [HostPreservationBindingPreflightTests.cs](../tests/LimitedUnderground.FirmwareLoader.Tests/HostPreservationBindingPreflightTests.cs), and was merged in [PR #11](https://github.com/Limited-Underground/Firmware-Loader/pull/11). The historical proposal wording below describes the design boundary, not an outstanding need to implement that checker again. The checker assesses fixture consistency only; engine integration, production admission/trust, device operations and physical acceptance remain outside this implemented scope. The current complete host-validation layer is recorded in [Project status](PROJECT_STATUS.md). Host consistency is not physical acceptance.
 

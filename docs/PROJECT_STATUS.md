@@ -1,5 +1,18 @@
 # Project status
 
+## Current authority and next action
+
+Product development is frozen indefinitely. Authorized current documentation, preservation and isolated source recovery continue within their own scopes; production remains **inspection-only**. [Foundation](FOUNDATION.md) selects current V1 requirements, implemented/demonstrated/incomplete capability and the existing acceptance gates. [CONTRIBUTING](../CONTRIBUTING.md) owns execution/publication rules. Earlier development-resumption statements below are historical.
+
+[Project #3](https://github.com/orgs/Limited-Underground/projects/3) owns live task/owner/acceptance status. The existing foundation child is LUF-0012a; its completed LUF-0012 parent retains its original acceptance. Publication, ready and merge state must be read from the actual authorized ref/PR. Do not infer readiness from this page, a snapshot, an old test run or a task status. A denied ready transition is not permission to retry by CLI, browser or another transport.
+
+The current implementation baseline and exact retained source/build/reference-artifact identities are selected in [Recovery](RECOVERY.md#declared-inputs). Merged .NET 10 is preserved; no framework migration is part of documentation work. The source-build proof, independent static review and author-render proof keep their recorded limits. Independent visual review was not completed; host success is never physical acceptance. Later checker/gateway edits need their own focused checks and eventual current-ref CI; older host runs do not automatically cover changed tooling.
+
+**Next safe action:** establish the current owning task, approved checkout/ref, dirty work and specific owner scope; reconcile only changed owned facts, run [focused checks](TESTING.md#documentation-checks), and leave exact outcomes/limits for the next reader. Keep supported publication, ready/merge decisions and shared handbook integration with their existing owners. No product, device or release task starts without its separate authority.
+
+## Retained history
+
+The following records retain original identities, outcomes and limitations. Their old branch, publication, framework and resumption statements do not describe current authority or grant new acceptance.
 ## Current working state — October 25, 2026
 
 The owner accepted the bounded source-recovery baseline on October 23. Ordinary Firmware Loader development may resume in this standalone repository under its task-specific rules. [Firmware Loader Project #3](https://github.com/orgs/Limited-Underground/projects/3) is the sole current task authority; the former Trail V1 Loader entries are archived history. Select the next outcome there, then inspect the actual branch, working changes, applicable contract and validation scope before editing.
