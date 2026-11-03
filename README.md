@@ -28,7 +28,7 @@ From the intended Windows checkout with PowerShell 7.5+ and the declared stable 
 .\tools\Test-Loader.ps1
 ```
 
-[Testing](docs/TESTING.md) gives the practical full/focused commands, selector rules and retained diagnostics. [Recovery](docs/RECOVERY.md) pins source/toolchain/reference evidence and fresh reconstruction steps. Existing exact-source hosted Windows validation passed; documentation-only changes reuse it and do not claim a new local build, numerical test count, clean-machine or physical result.
+[Testing](docs/TESTING.md) gives the practical full/focused commands, selector rules and retained diagnostics; its [documentation-only checks](docs/TESTING.md#documentation-checks) run without the SDK or an application build. [Recovery](docs/RECOVERY.md) pins source/toolchain/reference evidence and fresh reconstruction steps. Existing exact-source hosted Windows validation passed; documentation-only changes reuse it and do not claim a new local build, numerical test count, clean-machine or physical result.
 
 ## License and names
 

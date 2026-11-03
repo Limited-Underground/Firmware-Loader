@@ -38,7 +38,7 @@ These are the existing scope/gaps, not a new approval system. No task is marked 
 
 Unresolved inputs are recorded once through their owning authorities: production trust/target/recovery inputs belong to LUF-0008a/b; storage enrollment belongs to the existing LUF-0009 children; release/package and branding clearance belong to LUF-0011a and BRANDING.md. Recommended resolution is to obtain those exact owner-approved inputs in their existing tasks, retain inspection-only/Preview while absent, and avoid choosing keys, offsets, a package format or a legal result here.
 
-**Next authorized step now:** fresh reading-path review of this coherent documentation delta, followed by the coordinator's exact-delta release before any commit/push through existing draft PR #18. No duplicate PR or merge. Shared handbook presentation is owned separately; it consumes pinned source, not a second specification. After an explicit decision to resume product work, reconcile the existing LUF-0008b concrete-input dependency before choosing dependent engineering work; this page does not start it.
+**Next safe action:** read the current owning Project item and owner authorization, establish the actual checkout/ref/dirty work, then carry out only its bounded documentation/preservation outcome. Run the focused documentation checks and record results/limits. Publication and a draft-to-ready transition require their own exact scope; after a denied ready action, do not use another tool to retry it without the missing explicit owner approval. Review and publication state come from the live task/PR, not a hardcoded PR number or this dated snapshot. Shared handbook presentation is separately owned and consumes pinned source. If product development is explicitly resumed, resolve the existing LUF-0008b concrete-input dependency before dependent engineering; no engineering task starts here.
 
 ## Reading route and reusable procedures
 
@@ -48,13 +48,17 @@ Unresolved inputs are recorded once through their owning authorities: production
 | Portable rules / tool-skill routing | [CONTRIBUTING](../CONTRIBUTING.md), [agent adapter](../AGENTS.md) |
 | Current task/evidence handoff | [Project status](PROJECT_STATUS.md), Project #3 |
 | Components, runtime/refusal flows and decisions | [Architecture](ARCHITECTURE.md), [C4 model](architecture/README.md) |
-| Candidate versus fixture contracts / security boundaries | [Interfaces](INTERFACES.md) and its selected contracts |
-| Exact build/full/focused test procedure and diagnostics | [Testing](TESTING.md) |
+| Candidate versus fixture contracts / security boundaries | [Interfaces](INTERFACES.md), [preservation/binding contract selection](HOST-PRESERVATION-BINDING-ADMISSION-CONTRACT.md) |
+| Exact build/full/focused/documentation check procedure and diagnostics | [Testing](TESTING.md), [hosted gate](testing/CI-HOST-GATE.md) |
 | Source/toolchain/reference artifacts and clean recovery | [Recovery](RECOVERY.md) |
 | Preservation, failed-run retention, scoped cleanup | [Maintenance](MAINTENANCE.md) |
 | Source license, names, dependency and distribution limits | [LICENSE](../LICENSE), [BRANDING](../BRANDING.md), [third-party records](THIRD_PARTY.md) |
-| Historical requirements/results | [Backlog](../tasks/BACKLOG.md), [remaining V1 plan](../tasks/V1_REMAINING_PLAN.md), [progress log](PROGRESS_LOG.md), linked dated evidence |
+| Requirement selection and existing task scope | [Backlog selection](../tasks/BACKLOG.md), [remaining V1 plan](../tasks/V1_REMAINING_PLAN.md); their old status/task snapshots are explicitly retained history |
 
 **Implemented** identifies source; **demonstrated** identifies an executed check/revision; **intended** identifies unimplemented scope; **unresolved** identifies a missing decision/result. Reuse exact unchanged evidence. Do not rerun a host suite for a text-only change, infer actual counts, promote fixture success to physical acceptance or silently retire failed evidence.
 
 Private manifests, raw diagnostics, original-device data, credentials and machine-specific paths stay in established custody. A handbook imports an explicit hash-pinned allowlist; it is not a recursive source mirror, public website or secret store.
+
+## Retained history
+
+[Progress log](PROGRESS_LOG.md) and the dated acceptance/contract links above preserve original source, decisions and evidence. A historical successful run or consumed physical grant does not resume work or replace current authority. The documentation checker reads the current route above, checks its references, and leaves historical bodies unchanged.

@@ -101,6 +101,9 @@ function Invoke-LoggedStage([string]$Name, [string[]]$Arguments) {
 
 $projectRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 Assert-PlainDirectory $projectRoot
+# Documentation preflight is offline and fail-closed, before any SDK/build work.
+& (Join-Path $PSScriptRoot 'Test-LoaderDocumentation.ps1') -Root $projectRoot
+& (Join-Path $PSScriptRoot 'Test-LoaderDocumentation.Tests.ps1') -Root $projectRoot
 if ([string]::IsNullOrWhiteSpace($env:TEMP)) { throw 'TEMP is required.' }
 $validationParent = [IO.Path]::GetFullPath($env:TEMP)
 Assert-PlainDirectory $env:TEMP

@@ -2,6 +2,22 @@
 
 These instructions describe the adopted validation interface. Host evidence and remaining qualification limits are recorded in project status; dated release evidence remains historical.
 
+## Documentation checks
+
+For current-documentation and documentation-tooling changes, run these offline PowerShell 7.5+ standard-library checks from the intended checkout; they require no SDK, network, package installation or product execution:
+
+```powershell
+.\tools\Test-LoaderDocumentation.ps1
+.\tools\Test-LoaderDocumentation.Tests.ps1
+```
+
+The [validator](../tools/Test-LoaderDocumentation.ps1) and [negative fixtures](../tools/Test-LoaderDocumentation.Tests.ps1) are repository-local tooling. The validator derives its current-page selection from [Foundation's reading route](FOUNDATION.md#reading-route-and-reusable-procedures), checks inline local file/heading references, and compares declared runtime/SDK/source/target/model identities with the existing owning Recovery rows, project/global/workflow configuration, embedded target constants and UTF-8/LF model bytes. It also detects selected known freeze/inspection/publication contradictions and transient PR-based next actions. It does not create a second status authority.
+
+A section headed exactly `## Retained history` ends a document's current selection. Links to historical source/evidence remain checked, but their original bodies are not rewritten or treated as current permissions. The negative fixtures replace input text in memory; they mutate no repository files. They demonstrate refusal of representative missing/escaping/broken references, source/tool/artifact mismatches and authority contradictions, plus acceptance of explicit history and date-only changes.
+
+These are bounded consistency checks, not a Markdown implementation or proof of every paraphrase. They do not authenticate the declared Git commit or hosted artifact, contact external links/private Projects, infer freshness from timestamps, prove architecture truth, approve a task/ref, confer signer/device authority or establish production/physical acceptance. Fresh human/source review remains necessary for changed claims and access/owner decisions. Cooperative filesystem assumptions still apply.
+
+The full Test-Loader.ps1 gate runs the validator and its fixtures before SDK enumeration, output allocation and the unchanged application/test build stages. A failed documentation preflight stops that invocation; there is no skip flag added to the full gate. An existing application-build result remains evidence for its original inputs, not proof that later gateway/checker code ran. Use the focused checks above for a documentation-only delta; do not repeat a completed host build merely to refresh a date.
 ## Full gate
 
 From the intended checkout, run `./tools/Test-Loader.ps1` using PowerShell 7.5 or newer; the older synthetic qualification used 7.6.5, while the November 2 hosted receipt records 7.6.9. Windows PowerShell 5.1 is not supported by this candidate. Both LUF_UI_ONLY and LUF_STORE_ONLY must differ from the exact string `1`; the full wrapper refuses focused selection rather than resetting the caller's flags. An installed stable .NET 10 SDK is required: the wrapper selects the highest installed stable `10.0.x` SDK, consistent with the repository `global.json` (major/minor 10.0, latest feature band, no previews). No tool installation or online package retrieval is part of validation.

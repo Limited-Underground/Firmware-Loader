@@ -8,6 +8,7 @@ This describes source-file/host recovery, **not** LUF-0010a physical firmware re
 | --- | --- |
 | Source/history | Public repository https://github.com/Limited-Underground/Firmware-Loader.git; merged .NET 10 baseline **d74832b1d2579762fc1aea0634ce409a9e4c21ec** |
 | Framework / SDK policy | net10.0-windows; [global.json](../global.json): stable 10.0.100, latestFeature roll-forward, no previews |
+| Hosted SDK | [Workflow](../.github/workflows/loader-host.yml) provisions 10.0.403; installed SDK/Desktop packs remain declared inputs. |
 | Host prerequisites | Windows with WPF/desktop support, Git, PowerShell 7.5+, installed stable .NET 10 SDK with Windows Desktop reference/runtime packs |
 | Packages | [NuGet.Config](../NuGet.Config) clears feeds; the app/test projects require no external PackageReference or secret feed |
 | Validation | [Test-Loader.ps1](../tools/Test-Loader.ps1), full suite; [Testing](TESTING.md) owns the practical invocation/selectors/receipts. [Hosted workflow](../.github/workflows/loader-host.yml) pins exact action commits and SDK10.0.403. |
@@ -17,7 +18,7 @@ The installed SDK is a declared prerequisite; this is not provisioning or qualif
 
 ## Reconstruct in a new isolated directory
 
-Run from an approved staging parent; choose a nonexistent task-owned destination. These commands leave an existing working copy untouched:
+Run from an approved staging parent; choose a nonexistent task-owned destination. These commands leave an existing working copy untouched. They reconstruct the recorded implementation/build baseline and its original tooling, rather than selecting the live documentation branch. Select any current authorized documentation/tooling ref through the owning task and verify its own check results; retained host proof does not cover later gateway/checker edits:
 
     git clone --no-local https://github.com/Limited-Underground/Firmware-Loader.git NEW_DIRECTORY
     git -C NEW_DIRECTORY checkout --detach d74832b1d2579762fc1aea0634ce409a9e4c21ec

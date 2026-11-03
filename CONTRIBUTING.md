@@ -51,11 +51,13 @@ Do not persist or publish serial ports, USB serials, MAC addresses, pairing data
 
 ## Validation and closeout
 
-After executable-source changes, run the existing tools/Test-Loader.ps1 entrypoint. For policy-only documentation changes, verify the affected text, links and preservation instead; do not imply that a new .NET run occurred or is required solely by this documentation edit. Warning-as-error builds and deterministic core tests must pass before describing the changed source as validated. Do not infer current test counts from introductory historical descriptions: use the actual runner and owning evidence when an authorized validation runs.
+After executable-source changes, run the existing tools/Test-Loader.ps1 entrypoint. For documentation and documentation-checker changes, use the offline validator and negative fixtures in [Testing](docs/TESTING.md#documentation-checks), review the changed source claims and preserve history. Do not imply that a new .NET run occurred or is required solely by a documentation edit. The full host gate runs these checks before its SDK/build stages; a new checker/gateway delta still needs its own focused review. Warning-as-error builds and deterministic core tests must pass before describing the changed source as validated. Do not infer current test counts from introductory historical descriptions: use the actual runner and owning evidence when an authorized validation runs.
 
 Keep source/build, host tests, packaging, clean-machine checks, signing, device-write, recovery and production evidence separate. Future artifacts record source identity, target manifest, signer, exact bytes/SHA-256, timestamp and validation layer. Update project status and the relevant existing evidence/contract only when their owned facts change. If publication remains unauthorized, report implementation and publication separately.
 
 This documentation recovery did not rerun validation or grant new implementation, device, signing, release or publication authority.
+
+## Retained history
 
 ## Recovery handoff — October 22, 2026
 

@@ -39,7 +39,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source rec
 
 ## Validation
 
-- After any source change, run tools\Test-Loader.ps1.
+- After executable application-source changes, run tools\Test-Loader.ps1. For current documentation/checker-only changes, run the documentation validator and its negative fixtures from TESTING.md; reuse unchanged application-build evidence. The full host gate also runs those documentation checks before any SDK/build work.
 - Warning-as-error builds and deterministic core tests must pass before a change is described as validated.
 - Keep source, build, test, package, clean-machine, signing, hardware-write, recovery, and production evidence separate.
 - Future artifacts must record source identity, target manifest, signer, exact bytes, SHA-256, timestamp, and validation layer.
