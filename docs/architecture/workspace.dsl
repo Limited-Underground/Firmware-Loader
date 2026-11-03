@@ -5,7 +5,7 @@ workspace "Limited Underground Firmware Loader" "Inspection-only source at d7483
         files = softwareSystem "Windows file system" "External untrusted candidate storage." {
             tags "External"
         }
-        authorities = softwareSystem "Target project authorities" "OpenTrail and OpenGauge own target, artifact, compatibility and recovery facts." {
+        authorities = softwareSystem "Target project authorities" "Limited Underground Trail and Limited Underground Display own target, artifact, compatibility and recovery facts." {
             tags "External"
         }
         loader = softwareSystem "Limited Underground Firmware Loader — Preview" "Production inspection only; no device or installation authority." {

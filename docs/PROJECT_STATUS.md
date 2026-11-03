@@ -7,7 +7,7 @@ Merged source was verified at d74832b1d2579762fc1aea0634ce409a9e4c21ec, includin
 
 Current foundation task: [LUF-0012a on Project #3](https://github.com/orgs/Limited-Underground/projects/3?pane=issue&itemId=291511595), child of the retained LUF-0012 recovery acceptance. This documentation is a topic candidate until separately reviewed/merged. Older local overlays stay preserved and unintegrated. Production remains inspection-only; physical and release gates remain open.
 
-Next safe action: complete coordinated clean Windows source-recovery evidence and official model export, integrate the current allowlisted documents into the local/private handbook, and perform independent fresh-reader review. No fresh host or physical run is claimed merely by this status edit.
+Current evidence: [source recovery](RECOVERY.md) records the independently reviewed exact-source hosted Windows gate41523963520 with SDK10.0.403 and its omitted raw/count/binary evidence. The earlier three evidence corrections and source/model proof passed independent review; this expanded [current V1 documentation](FOUNDATION.md) is a new coherent draft awaiting a fresh reading-path review. No local build or physical run is claimed. Next safe action: complete focused documentation/model checks, then obtain the coordinator-released fresh review and exact-delta release before committing/pushing through existing draft PR #18. Shared handbook integration is owned separately; its earlier012 snapshot consumed the prior corrected pins, not automatically this new draft. No product work, duplicate PR or merge follows.
 
 ## Current working state — October 25, 2026
 

@@ -12,7 +12,7 @@ GitHub Projects owns current task scope, status, priority, dependencies and reco
 
 Preserve existing working changes and original evidence. Before moving or deleting anything, establish exact paths, source identity, unique contents and an appropriate recovery copy; remove only approved obsolete material. Do not turn copied artifacts, historical test results or publication into current runtime acceptance. Keep credentials, private identifiers, personal data and machine-specific private paths out of public records.
 
-Publication needs explicit authorization for the repository, destination and ref, including each applicable commit, fetch/pull, push, PR, merge and remote-verification operation. Do not bulk-publish unrelated changes, rewrite history, force-push, delete backup branches or bypass required checks. Website deployment is separate scope.
+Publication needs explicit authorization for the repository, destination, ref and applicable commit/push/PR/merge scope. Once authorized, routine read-only verification of that exact destination/result is included unless the owner restricts it; it is not a separate repeated consent gate. Do not bulk-publish unrelated changes, rewrite history, force-push, delete backup branches or bypass required checks. Website deployment is separate scope.
 
 ### CI and publication timing
 
@@ -26,18 +26,18 @@ Follow [File maintenance](docs/MAINTENANCE.md) for storage roles, run ownership,
 
 Start from the linked engineering status and contracts below, then inspect the actual checkout/ref and working changes before mutation. Do not assume a fresh clone contains another developer's uncommitted work. If the current Project, source identity, authorization or preservation state cannot be established, record the specific gap and continue only unaffected authorized work.
 
-Update existing owning records rather than creating a competing journal. A handoff must identify the authorized outcome, exact source/candidate and environment, preserved dirty work, verification and its limits, blockers, next action, and applicable approval/recovery conditions. Reconcile actual state after interruption before retrying a mutation. These records must be sufficient without chat history, model memory or a user-local tool skill. Historical evidence remains historical until reverified.
+Update existing owning records rather than creating a competing journal. A handoff must identify the authorized outcome, exact source/candidate and environment, preserved dirty work, verification and its limits, blockers, next action, and applicable approval/recovery conditions. Reconcile actual state after interruption before retrying a mutation. These records must be sufficient without chat history, model memory or a user-local tool skill. A local skill may route to them but cannot resume frozen development, rename products, select a stale checkout or weaken accepted authority. Use Limited Underground and approved product names in full in current prose; preserve historical evidence and technical keys/source symbols. Historical evidence remains historical until reverified.
 
 ## Engineering entrypoints
 
-- [Architecture](docs/ARCHITECTURE.md): application/session/provider and inspection boundaries.
+- [Current V1 scope and reading path](docs/FOUNDATION.md): accepted base scope, implemented/demonstrated/incomplete layers, remaining existing acceptance and next authorized step.
 - [Project status](docs/PROJECT_STATUS.md): engineering checkpoint, proven versus unproven behavior, and linked host evidence.
 - [Remaining V1 plan](tasks/V1_REMAINING_PLAN.md) and [backlog](tasks/BACKLOG.md): technical sequence, IDs and acceptance boundaries; reconcile status with the current GitHub Project.
 - [Host preservation/binding admission contract](docs/HOST-PRESERVATION-BINDING-ADMISSION-CONTRACT.md): preservation and admission requirements.
 - [Progress log](docs/PROGRESS_LOG.md): historical milestones, not a replacement for current acceptance.
 - [Repository](https://github.com/Limited-Underground/Firmware-Loader): source identity and access point. [Firmware Loader Project #3](https://github.com/orgs/Limited-Underground/projects/3) is the sole current Loader task authority; former Trail V1 Loader items are archived history. Recheck the exact item before selecting work. LUF-0010a concerns physical firmware installation/recovery, not source-file restoration.
 
-The standalone Firmware-Loader repository owns the common loader implementation. The old Trail tools/windows-loader implementation is a frozen predecessor, not a synchronized mirror or current implementation authority. Trail and Display retain their own target manifests, compatibility evidence, artifacts, signer decisions and recovery decisions.
+The standalone Firmware-Loader repository owns the common loader implementation. The old Trail tools/windows-loader implementation is a frozen predecessor, not a synchronized mirror or current implementation authority. Limited Underground Trail and Limited Underground Display retain their own target manifests, compatibility evidence, artifacts, signer decisions and recovery decisions.
 
 ## Product controls
 

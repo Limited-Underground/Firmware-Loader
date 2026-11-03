@@ -1,5 +1,8 @@
 # V1 remaining task plan
 
+**Current direction — November 2, 2026:** product development is frozen indefinitely. The [current V1 scope/evidence map](../docs/FOUNDATION.md) distinguishes completed host work from unresolved production/physical/release gates. The task scopes and historical status snapshots below retain their IDs and requirements; they are not execution authority. Use approved Limited Underground product names in current prose, while preserving technical keys and historical evidence. Optional Limited Underground Display work is outside the Limited Underground Trail base-V1 release. Only the dedicated Project owns live status.
+
+
 This is the remaining-work plan for the existing V1 scope, not completion evidence or operational approval. The backlog retains engineering IDs, technical facts and acceptance evidence. GitHub Projects is the authority for current task scope, status, priority, dependencies and recorded owner decisions. Execution follows the portable [CONTRIBUTING.md](../CONTRIBUTING.md) contract and current owner authorization, which persists across ordinary errors and resumed work while scope and prerequisites remain valid. No mandatory six-section format or fresh approval merely because a conversation resumes is required; board status does not grant execution or publication authority. Reuse accepted exact-artifact evidence. Unknown defects discovered during execution require bounded child tasks, not silently expanded scope.
 
 Optional products and V1.5 are excluded. Each physical or release task must first freeze exact artifacts, criteria, device/host identity and recovery authority.

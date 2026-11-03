@@ -25,13 +25,13 @@ Goals are bounded parsing, stale-authority refusal, sanitized status and reprodu
 
 ## 3. System Scope and Context
 
-This project is the shared customer-tool boundary. It does not own OpenTrail or OpenGauge firmware. Product projects remain authoritative for compatibility identifiers, target manifests, image hashes, signatures, recovery procedures, and physical acceptance.
+This project is the shared customer-tool boundary. It does not own Limited Underground Trail or Limited Underground Display firmware; historical project/source identifiers are retained as provenance. Product projects remain authoritative for compatibility identifiers, target manifests, image hashes, signatures, recovery procedures, and physical acceptance.
 
 | External boundary | Current interaction and ownership |
 | --- | --- |
 | Operator / Windows picker | Explicit product choice and one read-only candidate stream; no automatic device selection. |
 | Windows filesystem | Untrusted candidate file; path not retained in displayed result. No production operational store is configured. |
-| OpenTrail / OpenGauge authorities | Target/artifact/compatibility/recovery facts; Trail embeds a target key/hash and public-contract provenance as source constants; there is no build-time retrieval or runtime network API. |
+| Limited Underground Trail / Limited Underground Display authorities | Target/artifact/compatibility/recovery facts; Trail embeds a target key/hash and public-contract provenance as source constants; there is no build-time retrieval or runtime network API. |
 | Physical device, signer service, production recovery store | Unresolved / no production connection. Fixture interfaces imply no real command path. |
 
 The [Structurizr model](architecture/workspace.dsl) owns context/container views and a focused component view distinguishing production from fixtures. One desktop runtime is one container; C# classes are not containers. See [model/export instructions](architecture/README.md).
@@ -95,7 +95,7 @@ Providers expose only their exact open context, immutable project-owned target r
 
 Target rules and signer trust are independent authorities. Rules bind exact target keys to a project-owned manifest identity and source revision. A separately injected signer policy may identify signer IDs and configured public-key fingerprints, but configuration alone never sets `SignerTrusted` or `AdmissionAllowed`; real cryptographic verification and revocation are later gates.
 
-Production registers one provider factory for product/provider key `opentrail` and contract version `1`. Its immutable rule set contains only `heltec_v4_bench`; both the rule identity and source revision pin SHA-256 `ec818efab9a14ce4f0900068c9474acfe2577d74e2e39fa4850f3ff0567e9776` for the Git blob bytes of OpenTrail's public target contract at commit `a327104ac67a3f5918a8b0191c96dceb05b5399b`. The provider owns no file, device, transport, signer, admission, or mutation adapter and closes without external work.
+Production registers one provider factory for product/provider key `opentrail` and contract version `1`. Its immutable rule set contains only `heltec_v4_bench`; both the rule identity and source revision pin SHA-256 `ec818efab9a14ce4f0900068c9474acfe2577d74e2e39fa4850f3ff0567e9776` for the Git blob bytes of Limited Underground Trail's historical public target contract at commit `a327104ac67a3f5918a8b0191c96dceb05b5399b`. The provider owns no file, device, transport, signer, admission, or mutation adapter and closes without external work.
 
 Production signer trust remains empty. Display remains providerless. The default controller constructor also remains empty for isolated consumers and lifecycle tests; the WPF composition root explicitly injects the production registry.
 
@@ -133,7 +133,7 @@ Tests inject a fake adapter, fixture policy/profile and journal into the actual 
 
 **Implemented:** one Windows WPF process; no product server, network endpoint or device agent. Current output is framework-dependent and requires a matching Windows .NET Desktop runtime. SDK/PowerShell are development prerequisites, not an accepted installer. [Testing](TESTING.md) and [Recovery](RECOVERY.md) declare exact inputs.
 
-**Demonstrated remotely:** [integration PR #17](https://github.com/Limited-Underground/Firmware-Loader/pull/17) identifies a passing hosted Windows gate and tested head; hosted workflow uses Windows 2025 and a pinned SDK. **Unresolved:** standard-user clean-machine/package/support acceptance.
+**Demonstrated remotely:** the exact-source [PR #18 hosted run](https://github.com/Limited-Underground/Firmware-Loader/actions/runs/41523963520) passed on disposable Windows Server 2025 with SDK10.0.403; [Recovery](RECOVERY.md) binds the synthetic merge, source tree, sanitized artifact and independent review. This does not qualify the proposed customer Windows platform or establish a local run. **Unresolved:** standard-user clean-machine/package/support acceptance.
 
 The local/private engineering handbook is documentation presentation, not a Loader runtime service. Bind previews only to loopback; exclude credentials, captures and private records.
 
@@ -162,7 +162,7 @@ Selected interface versions and standard/custom boundaries: [Interfaces](INTERFA
 | Stable .NET 10 baseline | Merged [PR #16](https://github.com/Limited-Underground/Firmware-Loader/pull/16) and [integration #17](https://github.com/Limited-Underground/Firmware-Loader/pull/17); no new migration here |
 | Freeze / shared documentation approach | November 2 owner foundation decision; [current reading path](FOUNDATION.md) |
 
-No new protocol or invented ADR identities. Concrete target/release/trust inputs and adapter/storage/production composition remain unresolved under their existing Project owners.
+No new protocol or invented ADR identities. Concrete target/release/trust inputs and adapter/storage/production composition remain unresolved under their existing Project owners. The [current V1 acceptance table](FOUNDATION.md#existing-v1-acceptance-still-required) selects those existing gates; [third-party records](THIRD_PARTY.md) separate source licensing from package/naming clearance.
 
 ## 10. Quality Requirements
 
