@@ -13,6 +13,7 @@
 NuGet.Config text eol=lf
 *.dsl text eol=lf
 *.svg text eol=lf
+LICENSE text eol=lf
 
 # Images and packaged/native bytes are not text-normalized.
 *.png binary

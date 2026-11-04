@@ -33,6 +33,7 @@ Before authorized publication of executable, test or validation-tooling changes,
 Focused store, UI or individual tests help diagnose and verify a bounded change, but do not replace required full publication validation. Report the actual selected/finished count for the tested revision; do not carry a later branch's count onto main or combine separate runs into one full result. Configured required CI and exact publication/Ready/merge approval remain applicable.
 
 Documentation-only wording changes use the existing documentation checks and reuse genuinely unchanged application-build evidence. Do not rebuild the product solely for wording or claim that an older full run tested changed executable/tooling inputs.
+
 ## Practical full invocation
 
 Use an isolated PowerShell 7.5+ process from the intended source checkout. Choose an approved task-owned temporary parent outside source, create it first and set both TEMP/TMP to it. Do not use another task's output or an existing validation-run directory. In that isolated caller:

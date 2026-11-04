@@ -56,6 +56,7 @@ Retain the successful full-matrix receipt for the exact executable/test/tooling 
 Follow [candidate publication validation](TESTING.md#candidate-publication-validation): `tools/Test-Loader.ps1` is the local full entrypoint, while `tools/Invoke-LoaderCi.ps1` is hosted-only. Documentation-only wording uses the offline documentation checks and reuses unchanged product-build proof; no redundant product build is required solely for wording. Publication and integration still need their exact existing approval and configured checks.
 
 Keep raw logs, exception diagnostics and fixture renderings in the owned private evidence route. Preserve the accepted sanitized public artifact contract; maintenance/evidence retention does not authorize adding public diagnostic fields or uploading private logs.
+
 ## Handoff acceptance
 
 A reader must be able to locate the authoritative Live copy, current identity and dirty-work state, selected checkpoint and trust record, isolated restore evidence, pending holds, exact next safe action and required owner decisions without chat history or model-specific memory. State what was not verified. Maintenance completion never grants product installation, publication or ordinary-work resumption.

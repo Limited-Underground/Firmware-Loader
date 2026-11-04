@@ -52,6 +52,7 @@ var tests = new (string Name, Action Run)[]
 .Concat(HostUpdateEngineTests.All)
 .Concat(HostInterruptionTests.All)
 .Concat(HostOperationStoreTests.All)
+.Concat(MachineRecoveryStorePolicyTests.All)
 .Concat(HostPreservationPlanTests.All)
 .Concat(HostPreservationPayloadBindingTests.All)
 .Concat(HostPreservationBindingPreflightTests.All)
@@ -71,7 +72,7 @@ foreach (var test in tests)
     }
     catch (Exception error)
     {
-        Console.Error.WriteLine($"FAIL: {test.Name}: {error.Message}");
+        Console.WriteLine($"FAIL: {test.Name}: {error.Message}");
         Console.Error.WriteLine(error);
         Environment.ExitCode = 1;
         return;

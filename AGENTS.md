@@ -12,11 +12,11 @@
 
 ## Recovery execution
 
-Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source recovery on October 23, 2026. That historical development resumption is superseded by the November 2, 2026 indefinite product-development freeze. Follow the current [foundation reading path](docs/FOUNDATION.md) and CONTRIBUTING.md: only authorized preservation, documentation and isolated recovery continue. Continue authorized foundation recovery and documentation with clear outcomes and appropriate validation; no fixed response format, duration/file-count refusal, or automatic stop after each task applies. Preserve existing scope and do not perform speculative refactors or silently change an existing mode. Diagnose failures before a supported correction. Physical and publication authority remain separately constrained below.
+Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source recovery on October 23, 2026. That historical development resumption is superseded by the November 2, 2026 indefinite product-development freeze. Follow the current [foundation reading path](docs/FOUNDATION.md) and CONTRIBUTING.md: authorized preservation, documentation and isolated recovery continue, with the November 3 exception limited to LUF-0009g accepted storage-policy bring-forward and isolated host validation in a clean source-bound topic. Other product development remains frozen. Continue authorized foundation recovery and documentation with clear outcomes and appropriate validation; no fixed response format, duration/file-count refusal, or automatic stop after each task applies. Preserve existing scope and do not perform speculative refactors or silently change an existing mode. Diagnose failures before a supported correction. Physical and publication authority remain separately constrained below.
 
 ### Project-specific additions
 
-- During explicitly authorized future product work, preserve existing modes; prefer an explicit new mode or gate over silently changing one. The current freeze grants no such implementation work.
+- During explicitly authorized future product work, preserve existing modes; prefer an explicit new mode or gate over silently changing one. The current freeze permits only the explicit LUF-0009g host exception; it grants no other implementation scope.
 - After any physical failure, the next task is diagnosis only until the root cause is isolated.
 - Host success never equals physical acceptance. Always say so explicitly.
 - Keep original recovery, retained modes, and new modes clearly separated; never let cleanup-only or historical bytes become accepted originals.
