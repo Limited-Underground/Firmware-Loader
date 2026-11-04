@@ -8,7 +8,7 @@ Limited Underground Firmware Loader — Preview is a Windows utility intended to
 
 [LUF-0007a](testing/LUF-0007a-V1-RELEASE-BOUNDARY-2026-09-23.md) records the owner-accepted boundary proposal: initial Windows 11 Pro 25H2 x64 scope, one Heltec WiFi LoRa 32 V4 / HTIT-WB32LAF V4.2 candidate and proposed direct USB/ESP32-S3 ROM-bootloader transport. These are planning/qualification boundaries, not installation support. Its November 2 amendment accepts **.NET 10 LTS**; the original .NET 8/tooling observations remain history. Windows Server 2025 hosted tests do not qualify the proposed customer Windows installation. No accepted deployable firmware, physical adapter, package or signed installer is selected by this documentation.
 
-Source facts below map to merged .NET 10 main **d74832b1d2579762fc1aea0634ce409a9e4c21ec** (PRs #15–#17). Topic documentation remains a candidate until reviewed and merged. Technical keys `opentrail`, `opengauge` and `heltec_v4_bench`, source symbols, filenames and historical evidence identities are preserved; they are not public product branding.
+Source facts below map to merged .NET 10 main **d74832b1d2579762fc1aea0634ce409a9e4c21ec** (PRs #15–#17). This documentation was adopted through [PR #18](https://github.com/Limited-Underground/Firmware-Loader/pull/18), merge commit 747467163ec597ef377fd6d71d5f8c0f09ad5914; adoption does not add product or release acceptance. Technical keys `opentrail`, `opengauge` and `heltec_v4_bench`, source symbols, filenames and historical evidence identities are preserved; they are not public product branding.
 
 ## Implemented, demonstrated and incomplete
 

@@ -4,7 +4,7 @@
 
 Start with the [current V1 scope and reading path](docs/FOUNDATION.md), then [CONTRIBUTING](CONTRIBUTING.md) and [project status](docs/PROJECT_STATUS.md). They identify accepted requirements, implemented versus demonstrated capability, exact remaining gates and the next authorized step without private chat history. [Project #3](https://github.com/orgs/Limited-Underground/projects/3) owns live task status.
 
-Public source: <https://github.com/Limited-Underground/Firmware-Loader>. The current implementation baseline is merged .NET 10 main d74832b1d2579762fc1aea0634ce409a9e4c21ec; the architecture/recovery documentation topic is not a merged release.
+Public source: <https://github.com/Limited-Underground/Firmware-Loader>. The .NET 10 implementation baseline was merged at d74832b1d2579762fc1aea0634ce409a9e4c21ec (PRs #15–#17). Architecture/recovery documentation was adopted through [PR #18](https://github.com/Limited-Underground/Firmware-Loader/pull/18), merge commit 747467163ec597ef377fd6d71d5f8c0f09ad5914. Documentation adoption does not establish a production release.
 
 ## What the application does today
 
