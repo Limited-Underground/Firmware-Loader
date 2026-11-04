@@ -1,6 +1,6 @@
 # Limited Underground Firmware Loader — Preview
 
-**Product development is frozen indefinitely by the November 2, 2026 owner decision.** Authorized work is preservation, current documentation and isolated source recovery. The application remains **inspection-only**. Host validation never establishes physical acceptance.
+**The November 2 indefinite freeze retains a narrow November 3 host exception for LUF-0009g.** The owner authorized accepted storage-policy bring-forward and isolated host validation in a clean source-bound topic. Its [current result and limits](docs/testing/LUF-0009g-HOST-BRING-FORWARD-2026-11-03.md) record 237 passing host groups; no production device/store wiring is enabled. Other development remains frozen. The application remains **inspection-only**. Host validation never establishes physical acceptance.
 
 Start with the [current V1 scope and reading path](docs/FOUNDATION.md), then [CONTRIBUTING](CONTRIBUTING.md) and [project status](docs/PROJECT_STATUS.md). They identify accepted requirements, implemented versus demonstrated capability, exact remaining gates and the next authorized step without private chat history. [Project #3](https://github.com/orgs/Limited-Underground/projects/3) owns live task status.
 
@@ -16,7 +16,7 @@ A present signature or matching digest is not release authentication. Production
 
 ## V1 and remaining work
 
-The accepted base-V1 installation/recovery scope is Limited Underground Trail, not the optional Limited Underground Display provider. It is incomplete. [Current V1 acceptance](docs/FOUNDATION.md#existing-v1-acceptance-still-required) maps the existing signer/release, exact-device, preservation/storage, physical recovery and package/operator gates to their owning records. Do not start those tasks under the documentation freeze or infer authority from historical backlog labels.
+The accepted base-V1 installation/recovery scope is Limited Underground Trail, not the optional Limited Underground Display provider. It is incomplete. [Current V1 acceptance](docs/FOUNDATION.md#existing-v1-acceptance-still-required) maps the existing signer/release, exact-device, preservation/storage, physical recovery and package/operator gates to their owning records. Only the [named host exception](CONTRIBUTING.md#working-rules) may proceed; do not infer broader authority from historical backlog labels.
 
 Each product owns its target manifests, artifacts, compatibility, signer and recovery decisions. Loader owns the common application/session and enforcement boundary. Technical keys `opentrail`, `opengauge` and existing source symbols retain their identities; public names do not become protocol keys.
 

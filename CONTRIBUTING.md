@@ -1,12 +1,14 @@
 # Contributing and resuming Firmware Loader
 
-**November 2, 2026: product development is frozen indefinitely.** Current work is preservation, architecture documentation and isolated source recovery only. Start with the [foundation reading path](docs/FOUNDATION.md). Host evidence grants no device, signing, release, deployment or merge acceptance.
+**November 2, 2026: product development is frozen indefinitely.** The November 3 owner exception additionally permits only LUF-0009g accepted storage-policy bring-forward and isolated host validation; other product development remains frozen. Start with the [foundation reading path](docs/FOUNDATION.md). Host evidence grants no device, signing, release, deployment or merge acceptance.
 
 This is the portable entrypoint for developers and AI tools. [README](README.md) introduces the product; this document carries the working rules independently of local machine instructions. Local tooling may add checkout routing, but must not weaken these rules.
 
 ## Working rules
 
 The owner accepted bounded Firmware Loader source recovery on October 23, 2026. That historical resumption is superseded by the November 2 indefinite product-development freeze. Device, signing, release, publication and physical work retain separate authority. Use a clear outcome, bounded scope and proportionate evidence; there is no mandatory six-section ceremony or automatic stop after each small task. Diagnose routine failures without discarding work or expanding scope.
+
+For LUF-0009g, first bind the exact task/source/evidence, preserve relevant dirty overlays and use a clean isolated topic. Bounded host source, isolated tests/builds, documentation, evidence and draft-PR preparation are allowed. Maximum three product workers and one heavy build across the authorized V1 products; serialize shared integration/records. No physical hardware, live protected-store changes, privileged-machine changes, signing, deployment, release, unapproved publication or main merge. Reuse the accepted privilege model; do not reenroll a machine store. See the [current host result and remaining gates](docs/testing/LUF-0009g-HOST-BRING-FORWARD-2026-11-03.md).
 
 GitHub Projects owns current task scope, status, priority, dependencies and recorded owner decisions. Repository records own technical contracts and evidence. Reconcile the current Project with those records before selecting work; historical backlog labels are not current authorization. A board state never grants hardware, publication or merge authority. The retired hosted checklist, private control APIs and legacy workspace tracker are not execution prerequisites.
 

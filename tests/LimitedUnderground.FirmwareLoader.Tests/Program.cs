@@ -52,6 +52,7 @@ var tests = new (string Name, Action Run)[]
 .Concat(HostUpdateEngineTests.All)
 .Concat(HostInterruptionTests.All)
 .Concat(HostOperationStoreTests.All)
+.Concat(MachineRecoveryStorePolicyTests.All)
 .Concat(HostPreservationPlanTests.All)
 .Concat(HostPreservationPayloadBindingTests.All)
 .Concat(HostPreservationBindingPreflightTests.All)

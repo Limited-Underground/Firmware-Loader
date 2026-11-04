@@ -9,7 +9,7 @@ namespace LimitedUnderground.FirmwareLoader;
 
 internal enum HostStoreStep { Write, Flush, Replace, Readback }
 
-// Internal host checkpoint only: no production root, device or UI registration.
+// Durable host mechanics with a separately admitted machine-store policy; no device or UI registration.
 // Both views share one stable lock file and refresh the notice after acquiring it.
 internal sealed class HostOperationStore : IHostOperationLease, IHostUncertaintyJournal
 {
@@ -18,6 +18,7 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
     private const int MaximumRecordBytes = 1024;
     private readonly object gate = new();
     private readonly string root;
+    private readonly bool machine;
     private readonly Action<HostStoreStep>? checkpoint;
     private Lease? active;
     private Record? snapshot, ownedPrior;
@@ -26,11 +27,49 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
     private sealed record Record(string StoreDigest, string State, string? OperationDigest, string? RecoveryDigest);
 
     internal HostOperationStore(string directory, Action<HostStoreStep>? checkpoint = null)
+    : this(directory, false, checkpoint) { }
+
+    private HostOperationStore(string directory, bool machine, Action<HostStoreStep>? checkpoint = null)
     {
-        try { root = CanonicalDirectory(directory); }
+        this.machine = machine;
+        try
+        {
+            using var guard = machine ? MachineRecoveryStorePolicy.Acquire() : null;
+            if (machine ? directory != MachineRecoveryStorePolicy.RootPath : !IsTestRoot(directory)) throw new IOException();
+            root = CanonicalDirectory(directory);
+        }
         catch (Exception) { throw new InvalidOperationException("host-store-unavailable"); }
         this.checkpoint = checkpoint;
         lock (gate) Refresh();
+    }
+
+    internal static HostOperationStore OpenMachine() => new(MachineRecoveryStorePolicy.RootPath, true);
+
+    internal static HostOperationStore EnrollMachine(object proof)
+    {
+        if (!MachineRecoveryStorePolicy.ConsumeEnrollmentAuthority(proof)) throw new InvalidOperationException("host-store-unavailable");
+        using var guard = MachineRecoveryStorePolicy.Acquire();
+        string directory = MachineRecoveryStorePolicy.RootPath;
+        if (Directory.EnumerateFileSystemEntries(directory).Any()) throw new InvalidOperationException("host-store-unavailable");
+        using var lease = MachineRecoveryStorePolicy.CreateFile(Path.Combine(directory, LockName), FileShare.None);
+        using (var journal = MachineRecoveryStorePolicy.CreateFile(Path.Combine(directory, JournalName), FileShare.None))
+        {
+            journal.Write(Encode(new Record(Digest(RandomNumberGenerator.GetBytes(32)), "idle", null, null)));
+            journal.Flush(true);
+        }
+        lease.Dispose();
+        var store = OpenMachine();
+        if (store.poisoned) throw new InvalidOperationException("host-store-unavailable");
+        return store;
+    }
+
+    private static bool IsTestRoot(string directory)
+    {
+        string path = Path.GetFullPath(directory), parent = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar);
+        string leaf = Path.GetFileName(path);
+        return path == directory && Path.GetDirectoryName(path) == parent &&
+            leaf.StartsWith("LUF.HostStore.Tests.", StringComparison.Ordinal) &&
+            Guid.TryParseExact(leaf["LUF.HostStore.Tests.".Length..], "N", out _);
     }
 
     internal static HostOperationStore CreateIsolatedTestStore(string directory)
@@ -81,22 +120,26 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
         {
             if (active is not null || poisoned || committing) return null;
             FileStream? file = null;
+            IDisposable? guard = null;
             try
             {
+                guard = machine ? MachineRecoveryStorePolicy.Acquire() : null;
                 CheckDirectory(root);
                 string path = Path.Combine(root, LockName);
                 CheckRegular(path);
                 file = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
                 CheckHandle(file.SafeFileHandle, path);
+                if (machine) MachineRecoveryStorePolicy.CheckFile(file.SafeFileHandle);
                 Refresh(); // Never trust a snapshot sampled before exclusive ownership.
                 if (snapshot is null) throw new IOException();
-                active = new Lease(this, file);
+                active = new Lease(this, file, guard);
                 file = null;
+                guard = null;
                 ownedOperation = ownedRecovery = null; ownedPrior = null;
                 return active;
             }
             catch (Exception) { return null; }
-            finally { file?.Dispose(); }
+            finally { file?.Dispose(); guard?.Dispose(); }
         }
     }
 
@@ -158,15 +201,17 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
         committing = true;
         try
         {
+            using var guard = machine ? MachineRecoveryStorePolicy.Acquire() : null;
             CheckDirectory(root);
             var prior = snapshot ?? throw new IOException();
             byte[] expectedPrior = Encode(prior), bytes = Encode(next);
             if (!ReadRecord().AsSpan().SequenceEqual(expectedPrior)) throw new IOException();
             temporary = Path.Combine(root, "pending-" + Guid.NewGuid().ToString("N") + ".json");
-            using (var file = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write,
-                FileShare.None, 4096, FileOptions.WriteThrough))
+            using (var file = machine ? MachineRecoveryStorePolicy.CreateFile(temporary, FileShare.None) :
+                new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
             {
                 CheckHandle(file.SafeFileHandle, temporary);
+                if (machine) MachineRecoveryStorePolicy.CheckFile(file.SafeFileHandle);
                 checkpoint?.Invoke(HostStoreStep.Write);
                 file.Write(bytes);
                 checkpoint?.Invoke(HostStoreStep.Flush);
@@ -226,11 +271,13 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
 
     private byte[] ReadRecord()
     {
+        using var guard = machine ? MachineRecoveryStorePolicy.Acquire() : null;
         CheckDirectory(root);
         string path = Path.Combine(root, JournalName);
         CheckRegular(path);
         using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         CheckHandle(file.SafeFileHandle, path);
+        if (machine) MachineRecoveryStorePolicy.CheckFile(file.SafeFileHandle);
         if (file.Length is <= 0 or > MaximumRecordBytes) throw new IOException();
         byte[] bytes = new byte[checked((int)file.Length)];
         file.ReadExactly(bytes);
@@ -293,7 +340,7 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
         public uint Volume, SizeHigh, SizeLow, NumberOfLinks, IndexHigh, IndexLow;
     }
 
-    private sealed class Lease(HostOperationStore owner, FileStream file) : IDisposable
+    private sealed class Lease(HostOperationStore owner, FileStream file, IDisposable? chain = null) : IDisposable
     {
         private int disposed;
         public void Dispose()
@@ -303,7 +350,7 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
             {
                 if (ReferenceEquals(owner.active, this))
                 { owner.active = null; owner.ownedOperation = owner.ownedRecovery = null; owner.ownedPrior = null; }
-                file.Dispose();
+                try { file.Dispose(); } finally { chain?.Dispose(); }
             }
         }
     }
