@@ -28,6 +28,7 @@ internal static class HostOperationStoreTests
         ("actual host engine verifies using shared durable lease and journal", EngineComplete),
         ("journal write flush replace readback failures prevent adapter submission", StartFailures),
         ("terminal persistence failures preserve uncertain engine outcome", CompletionFailures),
+        ("actual terminal root creation denial retains uncertainty after verified fixture commands", TerminalRootAclDenial),
         ("separate process contender cannot acquire a live lease", ProcessExclusion),
         ("hard kill releases ownership but retains durable recovery requirement", CrashRestart),
         ("kill before atomic replacement cannot submit a command", CrashBeforeReplace),
@@ -414,6 +415,52 @@ internal static class HostOperationStoreTests
             Require(new HostOperationStore(t.Root).HasUnresolvedOperation == (step != HostStoreStep.Readback),
                 "fresh durable completion only if replacement actually landed");
         }
+    }
+    private static void TerminalRootAclDenial()
+    {
+        using var t = new TemporaryStore(); using var f = new HostUpdateEngineTests.Fixture(select: false);
+        var directory = new DirectoryInfo(t.Root);
+        var originalAcl = directory.GetAccessControl(AccessControlSections.Access);
+        byte[] originalDescriptor = originalAcl.GetSecurityDescriptorBinaryForm(), intent = Array.Empty<byte>();
+        bool osDenied = false; int nativeError = 0;
+        f.Adapter.Boot = () =>
+        {
+            intent = File.ReadAllBytes(Journal(t.Root));
+            var denied = directory.GetAccessControl(AccessControlSections.Access);
+            denied.AddAccessRule(DenyCurrent(FileSystemRights.CreateFiles)); directory.SetAccessControl(denied);
+            try { using var probe = new FileStream(Path.Combine(t.Root, "terminal-acl-probe"), FileMode.CreateNew, FileAccess.Write, FileShare.None); }
+            catch (UnauthorizedAccessException error) { osDenied = true; nativeError = error.HResult & 0xffff; }
+            return Task.FromResult(new HostBootResult(f.Manifest.ImageDigest, true, true));
+        };
+        var engine = Engine(f, t.Store);
+        try
+        {
+            Require(engine.Select(f.Selection), "explicit selection before actual terminal denial"); Run(engine);
+            Require(osDenied && nativeError == 5 && intent.Length > 0, "actual OS access-denied must occur after durable intent");
+            using var record = JsonDocument.Parse(intent);
+            Require(record.RootElement.GetProperty("state").GetString() == "unresolved" &&
+                record.RootElement.GetProperty("recoveryDigest").GetString() == Recovery, "exact uncertainty predates terminal denial");
+            Require(engine.State == HostUpdateState.OutcomeUnknown && engine.BytesVerified &&
+                f.Adapter.Writes == 1 && f.Adapter.Reads == 1 && f.Adapter.Boots == 1,
+                "verified fixture commands cannot turn failed terminal persistence into success");
+            Require(t.Store.HasUnresolvedOperation && t.Store.RecoveryDigest is null &&
+                File.ReadAllBytes(Journal(t.Root)).AsSpan().SequenceEqual(intent) && Directory.GetFiles(t.Root).Length == 2,
+                "failed terminal commit preserves intent bytes without repair or pending files");
+        }
+        finally
+        {
+            originalAcl.SetSecurityDescriptorBinaryForm(originalDescriptor, AccessControlSections.Access);
+            directory.SetAccessControl(originalAcl);
+        }
+        Require(directory.GetAccessControl(AccessControlSections.Access).GetSecurityDescriptorBinaryForm()
+            .AsSpan().SequenceEqual(originalDescriptor), "exact original fixture DACL restored");
+        Require(File.ReadAllBytes(Journal(t.Root)).AsSpan().SequenceEqual(intent) && t.Store.TryAcquire() is null &&
+            !t.Store.MarkComplete() && !t.Store.ReleaseUnsubmitted(), "ACL restoration cannot unpoison or clear retained caller");
+        var reopened = new HostOperationStore(t.Root); using var freshLease = reopened.TryAcquire();
+        Require(freshLease is not null && reopened.HasUnresolvedOperation && reopened.RecoveryDigest == Recovery &&
+            !reopened.MarkComplete() && !reopened.ReleaseUnsubmitted(), "fresh owner retains uncertainty without inherited completion authority");
+        Console.WriteLine("Terminal permission fixture: actual CreateFiles denial=True; error=" + nativeError +
+            "; unresolved bytes preserved=True; original DACL restored=True");
     }
     private static void ProcessExclusion()
     {
