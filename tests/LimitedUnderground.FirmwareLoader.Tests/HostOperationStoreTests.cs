@@ -135,6 +135,13 @@ internal static class HostOperationStoreTests
         new(WindowsIdentity.GetCurrent().User ?? throw new InvalidOperationException("test account unavailable"),
             rights, AccessControlType.Deny);
 
+    // Windows normalizes descriptor control flags on write, so restoration is verified by rules, not raw bytes.
+    private static string[] AccessRules(DirectorySecurity acl) =>
+        acl.GetAccessRules(true, true, typeof(SecurityIdentifier)).Cast<FileSystemAccessRule>()
+            .Select(rule => string.Join('|', rule.IdentityReference.Value, rule.AccessControlType,
+                (int)rule.FileSystemRights, rule.InheritanceFlags, rule.PropagationFlags, rule.IsInherited))
+            .OrderBy(entry => entry, StringComparer.Ordinal).ToArray();
+
     private static void JournalAclDenial()
     {
         using var t = new TemporaryStore();
@@ -422,6 +429,7 @@ internal static class HostOperationStoreTests
         var directory = new DirectoryInfo(t.Root);
         var originalAcl = directory.GetAccessControl(AccessControlSections.Access);
         byte[] originalDescriptor = originalAcl.GetSecurityDescriptorBinaryForm(), intent = Array.Empty<byte>();
+        string[] originalRules = AccessRules(originalAcl);
         bool osDenied = false; int nativeError = 0;
         f.Adapter.Boot = () =>
         {
@@ -452,8 +460,8 @@ internal static class HostOperationStoreTests
             originalAcl.SetSecurityDescriptorBinaryForm(originalDescriptor, AccessControlSections.Access);
             directory.SetAccessControl(originalAcl);
         }
-        Require(directory.GetAccessControl(AccessControlSections.Access).GetSecurityDescriptorBinaryForm()
-            .AsSpan().SequenceEqual(originalDescriptor), "exact original fixture DACL restored");
+        Require(AccessRules(directory.GetAccessControl(AccessControlSections.Access)).SequenceEqual(originalRules),
+            "exact original fixture DACL rules restored");
         Require(File.ReadAllBytes(Journal(t.Root)).AsSpan().SequenceEqual(intent) && t.Store.TryAcquire() is null &&
             !t.Store.MarkComplete() && !t.Store.ReleaseUnsubmitted(), "ACL restoration cannot unpoison or clear retained caller");
         var reopened = new HostOperationStore(t.Root); using var freshLease = reopened.TryAcquire();
