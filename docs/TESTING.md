@@ -24,6 +24,15 @@ From the intended checkout, run `./tools/Test-Loader.ps1` using PowerShell 7.5 o
 
 The wrapper builds Release application/tests with existing warning-as-error project settings, then runs the exact newly built test DLL. For a local run read the actual suite mode and count in its retained output; the hosted sanitized receipt reports full mode/stage success without a numeric count. Introductory or historical counts do not establish current coverage. Host test success never establishes device, physical, signing, deployment or owner acceptance.
 
+## Candidate publication validation
+
+Before authorized publication of executable, test or validation-tooling changes, require a successful full host matrix for the **exact candidate** or the verified intended merge result. Bind the result to that source identity and changed-file bytes, suite mode/selectors, all native stage results and final environment restoration. Testing only the merge base, an earlier head or a different tree is insufficient. Recheck the intended merge result when its base changes.
+
+`tools/Test-Loader.ps1` is the local full-matrix entrypoint. `tools/Invoke-LoaderCi.ps1` is the GitHub-hosted Windows wrapper; do not substitute it for local validation or simulate its hosted environment. Use the existing invocation and retained-evidence rules below.
+
+Focused store, UI or individual tests help diagnose and verify a bounded change, but do not replace required full publication validation. Report the actual selected/finished count for the tested revision; do not carry a later branch's count onto main or combine separate runs into one full result. Configured required CI and exact publication/Ready/merge approval remain applicable.
+
+Documentation-only wording changes use the existing documentation checks and reuse genuinely unchanged application-build evidence. Do not rebuild the product solely for wording or claim that an older full run tested changed executable/tooling inputs.
 ## Practical full invocation
 
 Use an isolated PowerShell 7.5+ process from the intended source checkout. Choose an approved task-owned temporary parent outside source, create it first and set both TEMP/TMP to it. Do not use another task's output or an existing validation-run directory. In that isolated caller:
