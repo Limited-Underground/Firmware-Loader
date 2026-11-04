@@ -66,7 +66,17 @@ var suiteMode = Environment.GetEnvironmentVariable("LUF_STORE_ONLY") == "1" ? "s
 Console.WriteLine($"Suite mode: {suiteMode}; selected groups: {tests.Length}");
 foreach (var test in tests)
 {
-    test.Run();
+    try
+    {
+        test.Run();
+    }
+    catch (Exception error)
+    {
+        Console.WriteLine($"FAIL: {test.Name}: {error.Message}");
+        Console.Error.WriteLine(error);
+        Environment.ExitCode = 1;
+        return;
+    }
     Console.WriteLine($"PASS: {test.Name}");
 }
 

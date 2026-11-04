@@ -1,0 +1,28 @@
+# Source text has explicit LF policy; this change does not renormalize existing files.
+* text=auto
+.gitattributes text eol=lf
+.gitignore text eol=lf
+*.cs text eol=lf
+*.csproj text eol=lf
+*.xaml text eol=lf
+*.ps1 text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+NuGet.Config text eol=lf
+*.dsl text eol=lf
+*.svg text eol=lf
+LICENSE text eol=lf
+
+# Images and packaged/native bytes are not text-normalized.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.bin binary
+*.dll binary
+*.exe binary
+*.pdb binary
