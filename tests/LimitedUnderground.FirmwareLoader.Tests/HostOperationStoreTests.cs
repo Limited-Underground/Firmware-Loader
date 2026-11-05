@@ -29,6 +29,7 @@ internal static class HostOperationStoreTests
         ("journal write flush replace readback failures prevent adapter submission", StartFailures),
         ("terminal persistence failures preserve uncertain engine outcome", CompletionFailures),
         ("actual terminal root creation denial retains uncertainty after verified fixture commands", TerminalRootAclDenial),
+        ("terminal journal sharing denial retains uncertainty after verified fixture commands", TerminalJournalSharingDenial),
         ("separate process contender cannot acquire a live lease", ProcessExclusion),
         ("hard kill releases ownership but retains durable recovery requirement", CrashRestart),
         ("kill before atomic replacement cannot submit a command", CrashBeforeReplace),
@@ -469,6 +470,56 @@ internal static class HostOperationStoreTests
             !reopened.MarkComplete() && !reopened.ReleaseUnsubmitted(), "fresh owner retains uncertainty without inherited completion authority");
         Console.WriteLine("Terminal permission fixture: actual CreateFiles denial=True; error=" + nativeError +
             "; unresolved bytes preserved=True; original DACL restored=True");
+    }
+    private static void TerminalJournalSharingDenial()
+    {
+        using var t = new TemporaryStore(); using var f = new HostUpdateEngineTests.Fixture(select: false);
+        FileStream? reader = null; byte[] intent = Array.Empty<byte>();
+        bool osDenied = false; int nativeError = 0, terminalReplaces = 0;
+        var store = new HostOperationStore(t.Root, step =>
+        {
+            if (reader is not null && step == HostStoreStep.Replace) terminalReplaces++;
+        });
+        f.Adapter.Boot = () =>
+        {
+            intent = File.ReadAllBytes(Journal(t.Root));
+            reader = new FileStream(Journal(t.Root), FileMode.Open, FileAccess.Read, FileShare.Read);
+            string probe = Path.Combine(t.Root, "terminal-sharing-probe");
+            try
+            {
+                File.WriteAllBytes(probe, intent);
+                try { File.Replace(probe, Journal(t.Root), null); }
+                catch (IOException error) { osDenied = true; nativeError = error.HResult & 0xffff; }
+            }
+            finally { if (File.Exists(probe)) File.Delete(probe); }
+            return Task.FromResult(new HostBootResult(f.Manifest.ImageDigest, true, true));
+        };
+        var engine = Engine(f, store);
+        try
+        {
+            Require(engine.Select(f.Selection), "explicit selection before terminal sharing denial"); Run(engine);
+            Require(osDenied && nativeError == 32 && terminalReplaces == 1 && intent.Length > 0,
+                "actual OS sharing violation and terminal replacement boundary must be observed");
+            using var record = JsonDocument.Parse(intent);
+            Require(record.RootElement.GetProperty("state").GetString() == "unresolved" &&
+                record.RootElement.GetProperty("recoveryDigest").GetString() == Recovery,
+                "durable uncertainty predates the sharing denial");
+            Require(engine.State == HostUpdateState.OutcomeUnknown && engine.BytesVerified &&
+                f.Adapter.Writes == 1 && f.Adapter.Reads == 1 && f.Adapter.Boots == 1,
+                "verified fixture commands cannot turn blocked replacement into success");
+            Require(store.HasUnresolvedOperation && store.RecoveryDigest is null &&
+                File.ReadAllBytes(Journal(t.Root)).AsSpan().SequenceEqual(intent) && Directory.GetFiles(t.Root).Length == 2,
+                "sharing denial preserves exact intent without orphan pending or probe files");
+        }
+        finally { reader?.Dispose(); }
+        Require(File.ReadAllBytes(Journal(t.Root)).AsSpan().SequenceEqual(intent) && store.TryAcquire() is null &&
+            !store.MarkComplete() && !store.ReleaseUnsubmitted(), "closing the reader cannot unpoison or clear retained authority");
+        var reopened = new HostOperationStore(t.Root); using var freshLease = reopened.TryAcquire();
+        Require(freshLease is not null && reopened.HasUnresolvedOperation && reopened.RecoveryDigest == Recovery &&
+            !reopened.MarkComplete() && !reopened.ReleaseUnsubmitted(),
+            "fresh owner retains uncertainty without inherited completion or withdrawal authority");
+        Console.WriteLine("Terminal sharing fixture: actual File.Replace denial=True; error=" + nativeError +
+            "; terminal replacement attempts=" + terminalReplaces + "; unresolved bytes preserved=True; pending files=False");
     }
     private static void ProcessExclusion()
     {
