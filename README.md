@@ -1,6 +1,6 @@
 # Limited Underground Firmware Loader — Preview
 
-**The November 2 indefinite freeze retains a narrow November 3 host exception for LUF-0009g.** The owner authorized accepted storage-policy bring-forward and isolated host validation in a clean source-bound topic. Its [current result and limits](docs/testing/LUF-0009g-HOST-BRING-FORWARD-2026-11-03.md) record 237 passing host groups; no production device/store wiring is enabled. Other development remains frozen. The application remains **inspection-only**. Host validation never establishes physical acceptance.
+**The November 2 indefinite freeze retains a narrow November 3 host exception for LUF-0009g.** The owner authorized accepted storage-policy bring-forward and isolated host validation in a clean source-bound topic. The [adopted host result and its limits](docs/PROJECT_STATUS.md#current-authority-and-next-action) include the storage bring-forward and the terminal sharing-denial regression. Production device and store wiring remain disabled. Other development remains frozen. The application remains **inspection-only**. Host validation never establishes physical acceptance.
 
 Start with the [current V1 scope and reading path](docs/FOUNDATION.md), then [CONTRIBUTING](CONTRIBUTING.md) and [project status](docs/PROJECT_STATUS.md). They identify accepted requirements, implemented versus demonstrated capability, exact remaining gates and the next authorized step without private chat history. [Project #3](https://github.com/orgs/Limited-Underground/projects/3) owns live task status.
 
