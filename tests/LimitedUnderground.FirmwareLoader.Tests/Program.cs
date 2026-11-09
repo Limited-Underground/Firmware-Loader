@@ -52,6 +52,7 @@ var tests = new (string Name, Action Run)[]
 .Concat(HostUpdateEngineTests.All)
 .Concat(HostInterruptionTests.All)
 .Concat(HostOperationStoreTests.All)
+.Concat(RestrictedTokenStoreTests.All)
 .Concat(MachineRecoveryStorePolicyTests.All)
 .Concat(HostPreservationPlanTests.All)
 .Concat(HostPreservationPayloadBindingTests.All)
@@ -60,7 +61,7 @@ var tests = new (string Name, Action Run)[]
 .ToArray();
 
 if (Environment.GetEnvironmentVariable("LUF_UI_ONLY") == "1") tests = LoaderUpdateUiTests.All.ToArray();
-if (Environment.GetEnvironmentVariable("LUF_STORE_ONLY") == "1") tests = HostOperationStoreTests.All.ToArray();
+if (Environment.GetEnvironmentVariable("LUF_STORE_ONLY") == "1") tests = HostOperationStoreTests.All.Concat(RestrictedTokenStoreTests.All).ToArray();
 
 var suiteMode = Environment.GetEnvironmentVariable("LUF_STORE_ONLY") == "1" ? "store-only" : Environment.GetEnvironmentVariable("LUF_UI_ONLY") == "1" ? "ui-only" : "full";
 Console.WriteLine($"Suite mode: {suiteMode}; selected groups: {tests.Length}");
