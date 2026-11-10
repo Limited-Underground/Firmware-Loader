@@ -17,9 +17,9 @@ public sealed class OpenTrailInspectionProviderFactory : ILoaderProductProviderF
     public const string HeltecV4BenchTargetKey = "heltec_v4_bench";
 
     // SHA-256 of the Git blob bytes for OpenTrail's public heltec_v4_bench target-contract.json at
-    // OpenTrail commit a327104ac67a3f5918a8b0191c96dceb05b5399b.
+    // OpenTrail commit 8a16cf75280f53b8c085f040eb8304b070ad65a5.
     public const string TargetContractSha256 =
-        "ec818efab9a14ce4f0900068c9474acfe2577d74e2e39fa4850f3ff0567e9776";
+        "bf40d99aa261a616060672238eb0c301e462e164c5fa2ae3ccdabb7e78ebbbba";
 
     public string ProductKey => ExactProductKey;
 
