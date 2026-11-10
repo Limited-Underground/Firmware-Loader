@@ -51,6 +51,7 @@ var tests = new (string Name, Action Run)[]
 .Concat(TrailReleaseAdmissionBoundaryTests.All)
 .Concat(HostUpdateEngineTests.All)
 .Concat(HostInterruptionTests.All)
+.Concat(HostUpdateCompositionTests.All)
 .Concat(HostOperationStoreTests.All)
 .Concat(RestrictedTokenStoreTests.All)
 .Concat(MachineRecoveryStorePolicyTests.All)
