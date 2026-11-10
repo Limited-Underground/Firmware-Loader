@@ -50,6 +50,15 @@ internal static class HostReleaseAdmission
 
     internal static HostAdmittedRelease? Admit(HostReleaseManifest manifest, byte[] image,
         byte[] signature, byte[] publicKey, HostAdmissionPolicy? policy, long now, out string refusal)
+        => AdmitCore(manifest, image, signature, publicKey, policy, now, out refusal, null);
+
+    internal static HostAdmittedRelease? AdmitProduction(ProductionReleaseManifest manifest, byte[] image,
+        byte[] signature, byte[] publicKey, HostAdmissionPolicy? policy, long now, out string refusal)
+        => AdmitCore(manifest.HostBindings, image, signature, publicKey, policy, now, out refusal, manifest);
+
+    private static HostAdmittedRelease? AdmitCore(HostReleaseManifest manifest, byte[] image,
+        byte[] signature, byte[] publicKey, HostAdmissionPolicy? policy, long now, out string refusal,
+        ProductionReleaseManifest? production)
     {
         // Freeze bounded caller-owned inputs before any digest or signature check.
         // A later caller mutation cannot change the key verified or the bytes retained.
@@ -91,7 +100,7 @@ internal static class HostReleaseAdmission
             using var rsa = RSA.Create();
             rsa.ImportSubjectPublicKeyInfo(publicKey, out int consumed);
             if (consumed != publicKey.Length || rsa.KeySize != 3072 || signature.Length != 384 ||
-                !rsa.VerifyData(manifest.CanonicalBytes(), signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pss))
+                !rsa.VerifyData(production?.CanonicalBytes() ?? manifest.CanonicalBytes(), signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pss))
                 return null;
         }
         catch (CryptographicException) { return null; }
