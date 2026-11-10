@@ -99,7 +99,7 @@ internal sealed class ProductionReleaseManifest
 
 internal sealed record ProductionCurrentState(string TargetProfile, string Bootloader, string Firmware, ulong Generation,
     string WriterProfileDigest, string PreservationPlanDigest, string RecoveryRequirementsDigest);
-internal sealed record ProductionAdmittedRelease(ProductionReleaseManifest Manifest, HostAdmittedRelease HostRelease);
+
 
 // Explicit isolated file state, never auto-created/enrolled by admission or registered in production.
 // Exclusive read/check/advance plus Flush(true); missing/corrupt/unwritable state refuses.
@@ -141,9 +141,18 @@ internal sealed class ProductionAdmissionState
     }
 }
 
-internal static class ProductionReleaseAdmission
+// T-0056: an unforgeable/re-pairing-resistant result within the normal typed API.
+// Only this full verification path can call the private constructor; no init setters.
+internal sealed class ProductionAdmittedRelease
 {
-    internal static ProductionAdmittedRelease? Admit(byte[]? manifestBytes, byte[]? rawImage, byte[]? paddedImage,
+    private ProductionAdmittedRelease(ProductionReleaseManifest manifest, HostAdmittedRelease hostRelease,
+        ProductionAdmissionState clockState, ProductionCurrentState current)
+    { Manifest = manifest; HostRelease = hostRelease; ClockState = clockState; CurrentContext = current; }
+    internal ProductionReleaseManifest Manifest { get; }
+    internal HostAdmittedRelease HostRelease { get; }
+    internal ProductionAdmissionState ClockState { get; }
+    internal ProductionCurrentState CurrentContext { get; }
+    internal static ProductionAdmittedRelease? Verify(byte[]? manifestBytes, byte[]? rawImage, byte[]? paddedImage,
         byte[]? signature, byte[]? publicKey, HostAdmissionPolicy? policy, ProductionCurrentState? current,
         ProductionAdmissionState? persistedState, long now, out string refusal)
     {
@@ -153,20 +162,34 @@ internal static class ProductionReleaseAdmission
             signature is null || publicKey is null || policy is null || current is null || persistedState is null) return null;
         rawImage = (byte[])rawImage.Clone(); paddedImage = (byte[])paddedImage.Clone();
         refusal = "production-binding";
-        if (m.Text("publicKeyFingerprint") == "" || m.Text("publicKeyFingerprint") != policy.PublicKeyDigest ||
-            m.ExpiresAt != policy.ValidUntil || now < m.IssuedAt ||
+        if (!ProductionReleaseAdmission.CurrentBindingsMatch(m, policy, current, now) ||
             (ulong)rawImage.Length != m.Number("rawImageLength") || (ulong)paddedImage.Length != m.Number("paddedImageLength") ||
             !paddedImage.AsSpan(0, rawImage.Length).SequenceEqual(rawImage) ||
             HostReleaseAdmission.Digest(rawImage) != m.Text("rawImageSha256") ||
-            HostReleaseAdmission.Digest(paddedImage) != m.Text("paddedImageSha256") ||
-            current.WriterProfileDigest != m.Text("writerProfileDigest") || current.PreservationPlanDigest != m.Text("preservationPlanDigest") ||
-            current.RecoveryRequirementsDigest != m.Text("recoveryRequirementsDigest") || current.TargetProfile != m.Text("targetProfile") || current.Bootloader != m.Text("requiredBootloader") ||
-            current.Firmware != m.Text("requiredCurrentFirmware") || current.Generation == 0 || current.Generation < m.Number("minimumCurrentGeneration") ||
-            current.Generation > m.Number("maximumCurrentGeneration") || current.Generation >= m.Number("generation")) return null;
+            HostReleaseAdmission.Digest(paddedImage) != m.Text("paddedImageSha256")) return null;
         var admitted = HostReleaseAdmission.AdmitProduction(m, paddedImage, signature, publicKey, policy, now, out refusal);
         if (admitted is null) return null;
         refusal = "persisted-clock-or-policy";
         if (!persistedState.TryAdvance(now, m.PolicyRevision)) return null;
-        refusal = ""; return new(m, admitted);
+        refusal = ""; return new(m, admitted, persistedState, current);
     }
+}
+internal static class ProductionReleaseAdmission
+{
+    // Same existing checks, shared by initial admission and the live composition guard.
+    internal static bool CurrentBindingsMatch(ProductionReleaseManifest m, HostAdmissionPolicy policy,
+        ProductionCurrentState current, long now) =>
+        m.Text("publicKeyFingerprint") != "" && m.Text("publicKeyFingerprint") == policy.PublicKeyDigest &&
+        m.ExpiresAt == policy.ValidUntil && now >= m.IssuedAt &&
+        current.WriterProfileDigest == m.Text("writerProfileDigest") && current.PreservationPlanDigest == m.Text("preservationPlanDigest") &&
+        current.RecoveryRequirementsDigest == m.Text("recoveryRequirementsDigest") && current.TargetProfile == m.Text("targetProfile") &&
+        current.Bootloader == m.Text("requiredBootloader") && current.Firmware == m.Text("requiredCurrentFirmware") &&
+        current.Generation != 0 && current.Generation >= m.Number("minimumCurrentGeneration") &&
+        current.Generation <= m.Number("maximumCurrentGeneration") && current.Generation < m.Number("generation");
+
+    internal static ProductionAdmittedRelease? Admit(byte[]? manifestBytes, byte[]? rawImage, byte[]? paddedImage,
+        byte[]? signature, byte[]? publicKey, HostAdmissionPolicy? policy, ProductionCurrentState? current,
+        ProductionAdmissionState? persistedState, long now, out string refusal) =>
+        ProductionAdmittedRelease.Verify(manifestBytes, rawImage, paddedImage, signature, publicKey, policy,
+            current, persistedState, now, out refusal);
 }
