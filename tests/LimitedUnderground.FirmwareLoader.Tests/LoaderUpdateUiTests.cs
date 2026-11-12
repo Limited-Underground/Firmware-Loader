@@ -133,17 +133,17 @@ internal static class LoaderUpdateUiTests
     private static void Progress()
     {
         using var f = new HostUpdateEngineTests.Fixture(select: false); var m = Model(f); var p = Panel(m); Select(p); Confirm(p);
-        var write = new TaskCompletionSource(); var read = new TaskCompletionSource<HostReadback>(); var boot = new TaskCompletionSource<HostBootResult>();
+        var write = new TaskCompletionSource(); var read = new TaskCompletionSource<HostRegionCheck>(); var boot = new TaskCompletionSource<HostBootResult>();
         f.Adapter.Write = () => write.Task; f.Adapter.Read = () => read.Task; f.Adapter.Boot = () => boot.Task;
         var run = Start(p); m.Refresh(); Require(m.Heading == "Writing update", "real engine writing"); Render(p, "04-writing");
         write.SetResult(); for(int i = 0; i < 10; i++) { Drain(); Thread.Sleep(1); } m.Refresh(); Require(m.Heading == "Written — verifying bytes", "ack not success"); Render(p, "05-readback");
-        read.SetResult(new(f.Image, true)); for(int i = 0; i < 10; i++) { Drain(); Thread.Sleep(1); } m.Refresh(); Require(m.Heading == "Bytes verified — checking startup", "bytes not startup"); Render(p, "06-boot-wait");
+        read.SetResult(HostRegionCheck.Of(f.Image, true)); for(int i = 0; i < 10; i++) { Drain(); Thread.Sleep(1); } m.Refresh(); Require(m.Heading == "Bytes verified — checking startup", "bytes not startup"); Render(p, "06-boot-wait");
         boot.SetResult(new(f.Manifest.ImageDigest, true, true)); Wait(run); Require(m.Heading == "Update verified", "full verification"); Render(p, "08-verified");
     }
     private static void ReadFailure()
     {
         using var f = new HostUpdateEngineTests.Fixture(select: false); var m = Model(f); var p = Panel(m); Select(p); Confirm(p);
-        f.Adapter.Read = () => Task.FromResult(new HostReadback(new byte[] { 9 }, false)); Wait(Start(p));
+        f.Adapter.Read = () => Task.FromResult(HostRegionCheck.Of(new byte[] { 9 }, false)); Wait(Start(p));
         Require(m.Heading.StartsWith("Outcome unknown", StringComparison.Ordinal) && f.Adapter.Boots == 0, "bad bytes cannot boot or succeed");
     }
     private static void Recovery()

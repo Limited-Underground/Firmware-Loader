@@ -7,6 +7,12 @@ does not imply that acceptance occurred on its original report date. Current
 engineering state and sequencing remain in [project status](PROJECT_STATUS.md) and
 the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acceptance.
 
+## 2026-11-12
+
+### L7 step 1 Add the esptool flash writer for the Heltec V4 bench board
+
+Following D-063, the update engine now verifies a write by the chip's MD5 of the written region (computed against the admitted image by the engine itself) instead of a full byte readback. A separate GPL flash helper drives esptool 5.3.1, and a new adapter takes chip digests of every span of the 16 MB layout before and after writing. Only two reviewed source files may start a process. The full host gate passed 314 groups, 12 of them new. Nothing is wired into production and no board was touched. See [the flash writer](FLASH-WRITER.md).
+
 ## 2026-10-29
 
 ### LUF-0009g Implement privileged storage policy and verify bounded Windows behavior

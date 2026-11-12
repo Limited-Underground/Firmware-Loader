@@ -5,6 +5,10 @@ LUF-0008b, LUF-0009f and LUF-0009h. It is **not an admitted physical profile,
 installation authority or recovery proof**. Production choices and signer
 catalogs remain disabled. Host validation never establishes physical acceptance.
 
+## Change for the first signed release (D-063, 2026-11-12)
+
+For the Heltec V4 bench writer, the verification evidence changes. The "readback" check for each span is now the chip's own MD5 of that span, taken before and after the write, instead of a full byte readback. The engine compares the chip's MD5 of the written span with the MD5 of the admitted image, and every other span must be unchanged. The writer, its limits and what remains open are in [FLASH-WRITER.md](FLASH-WRITER.md). The rest of this page is the original host-only contract shape.
+
 ## Unassigned production inputs
 
 The following are required facts, not defaults. Their production values remain

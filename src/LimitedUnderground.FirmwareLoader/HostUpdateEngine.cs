@@ -8,7 +8,13 @@ internal enum HostBindingFault { None, Cancelled, AuthorityChanged, DeviceUnsele
 internal sealed record HostSelection(object Identity, ulong Generation, string Target, string Model, string Adapter);
 internal sealed record HostAdapterProfile(int WriteMilliseconds, int ReadMilliseconds, int BootMilliseconds,
     int TotalMilliseconds, int MaximumChunk, bool SideEffectsApproved, bool BootApproved);
-internal sealed record HostReadback(byte[] Image, bool ProtectedSpansMatch);
+// D-063: a write is verified by the chip's own MD5 of the written region (transfer integrity;
+// the release signature already proved authenticity). The engine computes the expected digest itself.
+internal sealed record HostRegionCheck(string RegionMd5, bool ProtectedSpansMatch)
+{
+    internal static string Md5Hex(byte[] bytes) => Convert.ToHexString(System.Security.Cryptography.MD5.HashData(bytes));
+    internal static HostRegionCheck Of(byte[] observedBytes, bool protectedSpansMatch) => new(Md5Hex(observedBytes), protectedSpansMatch);
+}
 internal sealed record HostBootResult(string ImageDigest, bool Healthy, bool ProtectedStateMatches);
 
 // Only deterministic host fixtures implement these interfaces in this checkpoint.
@@ -24,7 +30,7 @@ internal interface IHostUpdateAdapter
     // Implementations MUST atomically compare expected selection/connection identity
     // at command admission, before any effect. Rechecking after a command is insufficient.
     Task WriteAsync(HostSelection expected, uint offset, byte[] image, int maximumChunk, CancellationToken cancellation);
-    Task<HostReadback> ReadbackAsync(HostSelection expected, uint offset, int length, CancellationToken cancellation);
+    Task<HostRegionCheck> ReadbackAsync(HostSelection expected, uint offset, int length, CancellationToken cancellation);
     Task<HostBootResult> BootAsync(HostSelection expected, CancellationToken cancellation);
 }
 // Host-side exclusive ownership only. Acquiring or releasing it MUST NOT open or signal a
@@ -255,7 +261,7 @@ internal sealed class HostUpdateEngine
             var observed = await read.WaitAsync(TimeSpan.FromMilliseconds(budget), commandCancellation.Token).ConfigureAwait(false);
             CheckPhase(phaseStart, budget);
             if (!CheckBinding()) { Stop("changed-after-readback"); return; }
-            if (!observed.ProtectedSpansMatch || !observed.Image.AsSpan().SequenceEqual(release.CopyImage()))
+            if (!observed.ProtectedSpansMatch || !string.Equals(observed.RegionMd5, HostRegionCheck.Md5Hex(release.CopyImage()), StringComparison.Ordinal))
             { Stop("independent-readback"); return; }
             BytesVerified = true;
             State = recovery ? HostUpdateState.RecoveryBootWait : HostUpdateState.BootWait;

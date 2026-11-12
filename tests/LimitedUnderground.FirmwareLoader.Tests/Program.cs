@@ -57,6 +57,7 @@ var tests = new (string Name, Action Run)[]
 .Concat(ProductionUpdateCompositionTests.All)
 .Concat(D5FiniteWriterContractTests.All)
 .Concat(ReleaseTrustAnchorTests.All)
+.Concat(EsptoolHostUpdateAdapterTests.All)
 .Concat(HostOperationStoreTests.All)
 .Concat(RestrictedTokenStoreTests.All)
 .Concat(MachineRecoveryStorePolicyTests.All)
@@ -211,12 +212,21 @@ void UiExposesChooserAndDisabledOperation()
 void SourceContainsNoHardwareMutationAdapter()
 {
     var sourceRoot = Path.Combine(repositoryRoot, "src");
-    var source = string.Join(
-        '\n',
-        Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories)
-            .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
-                           path.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase))
-            .Select(File.ReadAllText));
+    // L7 step 1 (D-063): exactly two reviewed files may start the separate flash helper. Every
+    // other source file stays free of device, process and flashing code, and even those two
+    // never open a port themselves or name an erase command.
+    var writerFiles = new[] { "EsptoolHostUpdateAdapter.cs", "FlashHelperRunner.cs" };
+    var files = Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories)
+        .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+                       path.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase))
+        .ToArray();
+    foreach (var name in writerFiles)
+        Require(files.Count(path => Path.GetFileName(path) == name) == 1, "reviewed writer file present once " + name);
+    var source = string.Join('\n', files.Where(path => !writerFiles.Contains(Path.GetFileName(path))).Select(File.ReadAllText));
+    var writerSource = string.Join('\n', files.Where(path => writerFiles.Contains(Path.GetFileName(path))).Select(File.ReadAllText));
+    foreach (var token in new[] { "System.IO.Ports", "SerialPort", "Windows.Devices", "ManagementObjectSearcher", "erase", "UseShellExecute = true" })
+        Require(!writerSource.Contains(token, StringComparison.OrdinalIgnoreCase), "prohibited writer token " + token);
+    Require(System.Text.RegularExpressions.Regex.Matches(writerSource, @"\.Start\(").Count == 1, "one process start in the writer files");
 
     var prohibited = new[]
     {
