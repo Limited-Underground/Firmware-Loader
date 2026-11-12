@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("LimitedUnderground.FirmwareLoader.Tests")]
+[assembly: InternalsVisibleTo("LimitedUnderground.ReleaseBuilder")]
 
 namespace LimitedUnderground.FirmwareLoader;
 
