@@ -234,7 +234,7 @@ internal static class HostInterruptionTests
         {
             ("connection reported a failure", f => f.Adapter.Write = () => Task.FromException(new IOException("private device detail COM99"))),
             ("time limit", f => f.Adapter.Write = () => { f.Now += f.Profile.WriteMilliseconds; return Task.CompletedTask; }),
-            ("Readback did not match", f => f.Adapter.Read = () => Task.FromResult(new HostReadback(new byte[] { 9 }, true))),
+            ("Readback did not match", f => f.Adapter.Read = () => Task.FromResult(HostRegionCheck.Of(new byte[] { 9 }, true))),
             ("Startup did not report", f => f.Adapter.Boot = () => Task.FromResult(new HostBootResult("heartbeat", true, true))),
             ("could not record completion", f => f.Journal.CompleteWorks = false),
             ("no longer connected", f => f.Adapter.Write = () => { f.Adapter.CurrentSelection = null; return Task.CompletedTask; }),
@@ -304,7 +304,7 @@ internal static class HostInterruptionTests
         public HostSelection? CurrentSelection => Fail ? throw new IOException("private enumeration detail") : inner.CurrentSelection;
         public Task WriteAsync(HostSelection expected, uint offset, byte[] image, int maximumChunk, CancellationToken cancellation) =>
             inner.WriteAsync(expected, offset, image, maximumChunk, cancellation);
-        public Task<HostReadback> ReadbackAsync(HostSelection expected, uint offset, int length, CancellationToken cancellation) =>
+        public Task<HostRegionCheck> ReadbackAsync(HostSelection expected, uint offset, int length, CancellationToken cancellation) =>
             inner.ReadbackAsync(expected, offset, length, cancellation);
         public Task<HostBootResult> BootAsync(HostSelection expected, CancellationToken cancellation) =>
             inner.BootAsync(expected, cancellation);

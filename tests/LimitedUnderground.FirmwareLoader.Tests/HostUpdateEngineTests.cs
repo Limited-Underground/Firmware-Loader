@@ -148,13 +148,13 @@ internal static class HostUpdateEngineTests
     }
     private static void ReadbackPending()
     {
-        using var f = new Fixture(); var pending = new TaskCompletionSource<HostReadback>(); f.Adapter.Read = () => pending.Task;
+        using var f = new Fixture(); var pending = new TaskCompletionSource<HostRegionCheck>(); f.Adapter.Read = () => pending.Task;
         var run = f.Engine.RunAsync(f.Engine.Confirm()); State(f, HostUpdateState.Readback); Require(!f.Engine.BytesVerified, "ack not verification");
-        pending.SetResult(new(f.Image, true)); run.GetAwaiter().GetResult(); State(f, HostUpdateState.Verified);
+        pending.SetResult(HostRegionCheck.Of(f.Image, true)); run.GetAwaiter().GetResult(); State(f, HostUpdateState.Verified);
     }
     private static void BadReadback()
     {
-        foreach (bool protect in new[] { true, false }) { using var f = new Fixture(); f.Adapter.Read = () => Task.FromResult(new HostReadback(protect ? new byte[] { 9 } : f.Image, protect)); Run(f.Engine); Unknown(f); Require(f.Adapter.Boots == 0, "bad readback prevents boot"); }
+        foreach (bool protect in new[] { true, false }) { using var f = new Fixture(); f.Adapter.Read = () => Task.FromResult(HostRegionCheck.Of(protect ? new byte[] { 9 } : f.Image, protect)); Run(f.Engine); Unknown(f); Require(f.Adapter.Boots == 0, "bad readback prevents boot"); }
     }
     private static void BootPending()
     {
@@ -194,7 +194,7 @@ internal static class HostUpdateEngineTests
         using (var f = new Fixture()) { f.Journal.StartWorks = false; Run(f.Engine); State(f, HostUpdateState.NoWriteStopped); Require(f.Adapter.Writes == 0, "marker before write"); }
         using (var f = new Fixture()) { f.Journal.CompleteWorks = false; Run(f.Engine); Unknown(f); }
     }
-    private static void ChangedAfterRead() { using var f = new Fixture(); f.Adapter.Read = () => { f.CurrentPolicy = f.Policy with { Revoked = true }; return Task.FromResult(new HostReadback(f.Image, true)); }; Run(f.Engine); Unknown(f); Require(f.Adapter.Boots == 0, "changed authority stops next command"); }
+    private static void ChangedAfterRead() { using var f = new Fixture(); f.Adapter.Read = () => { f.CurrentPolicy = f.Policy with { Revoked = true }; return Task.FromResult(HostRegionCheck.Of(f.Image, true)); }; Run(f.Engine); Unknown(f); Require(f.Adapter.Boots == 0, "changed authority stops next command"); }
 
     private static void ArtifactBinding()
     {
@@ -280,7 +280,7 @@ internal static class HostUpdateEngineTests
             }
             stream.Position = 0; Inspection = FirmwareBundleCandidateInspector.Inspect(stream, Context); CurrentInspection = Inspection;
             Adapter.CurrentSelection = Selection;
-            Adapter.Read = () => Task.FromResult(new HostReadback((byte[])Image.Clone(), true));
+            Adapter.Read = () => Task.FromResult(HostRegionCheck.Of((byte[])Image.Clone(), true));
             Adapter.Boot = () => Task.FromResult(new HostBootResult(Manifest.ImageDigest, true, true));
             Engine = NewEngine(); if (select) Require(Engine.Select(Selection), "valid host selection");
         }
@@ -300,10 +300,10 @@ internal static class HostUpdateEngineTests
                 throw new InvalidOperationException("selection-replaced-before-command");
         }
         internal Func<Task> Write = () => Task.CompletedTask;
-        internal Func<Task<HostReadback>> Read = () => Task.FromResult(new HostReadback(Array.Empty<byte>(), false));
+        internal Func<Task<HostRegionCheck>> Read = () => Task.FromResult(HostRegionCheck.Of(Array.Empty<byte>(), false));
         internal Func<Task<HostBootResult>> Boot = () => Task.FromResult(new HostBootResult("", false, false));
         public Task WriteAsync(HostSelection expected, uint offset, byte[] image, int maximumChunk, CancellationToken cancellation) { AdmissionHook?.Invoke(); CheckExpected(expected); Writes++; return Write(); }
-        public Task<HostReadback> ReadbackAsync(HostSelection expected, uint offset, int length, CancellationToken cancellation) { AdmissionHook?.Invoke(); CheckExpected(expected); Reads++; return Read(); }
+        public Task<HostRegionCheck> ReadbackAsync(HostSelection expected, uint offset, int length, CancellationToken cancellation) { AdmissionHook?.Invoke(); CheckExpected(expected); Reads++; return Read(); }
         public Task<HostBootResult> BootAsync(HostSelection expected, CancellationToken cancellation) { AdmissionHook?.Invoke(); CheckExpected(expected); Boots++; return Boot(); }
     }
     internal sealed class FakeLease : IHostOperationLease

@@ -148,9 +148,9 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
                 "Review the selected device and exact original. Recovery needs its own confirmation and will be verified independently." :
                 "Review the target and selected device. Confirmation applies only to this file, selection and attempt; changes invalidate it."),
             HostUpdateState.Writing or HostUpdateState.Recovering => (recovery ? "Restoring original" : "Writing update", "Write progress is not verification. Do not disconnect. Cancellation may leave an uncertain outcome."),
-            HostUpdateState.Readback or HostUpdateState.RecoveryReadback => ("Written — verifying bytes", "Comparing the exact image and protected regions. A write acknowledgement does not establish success."),
+            HostUpdateState.Readback or HostUpdateState.RecoveryReadback => ("Written — verifying bytes", "Checking the device's own checksum of the written image and of every protected region. A write acknowledgement does not establish success."),
             HostUpdateState.BootWait or HostUpdateState.RecoveryBootWait => ("Bytes verified — checking startup", "Waiting for the exact firmware identity and health checks. A generic heartbeat is insufficient."),
-            HostUpdateState.Verified => ("Update verified", "The exact bytes, protected regions and startup checks passed for this attempt. Field and release acceptance remain separate."),
+            HostUpdateState.Verified => ("Update verified", "The written image checksum, protected regions and startup checks passed for this attempt. Field and release acceptance remain separate."),
             HostUpdateState.Recovered => ("Original restored", "The independently verified original started correctly. Recovery does not make the attempted update successful."),
             HostUpdateState.OutcomeUnknown => ("Outcome unknown — recovery review required", UnknownCause(engine) + " " + (engine.BytesVerified ?
                 "Image bytes were verified, but the final outcome is unresolved. Do not retry automatically. Review the original and recovery requirements." :

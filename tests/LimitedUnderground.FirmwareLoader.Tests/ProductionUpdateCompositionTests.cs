@@ -177,7 +177,7 @@ internal static class ProductionUpdateCompositionTests
     {
         using var f=new Fixture();var e=f.Create();var image=f.Release!.HostRelease.CopyImage();var canonical=f.Release.Manifest.CanonicalBytes();
         f.Source.Image[0]^=1;canonical[0]=0;f.Binding!.CopyBytesAt(0)[0]^=1;
-        f.Source.Adapter.Read=()=>Task.FromResult(new HostReadback((byte[])image.Clone(),true));Require(e.Select(f.Source.Selection));Run(e);
+        f.Source.Adapter.Read=()=>Task.FromResult(HostRegionCheck.Of((byte[])image.Clone(),true));Require(e.Select(f.Source.Selection));Run(e);
         Require(e.State==HostUpdateState.Verified && LoaderProductionProviders.SignerTrustPolicies.Count==0 && new LoaderUpdateWorkflow().Choices.Count==0 && !f.Source.Controller.Snapshot.FirmwareWritingAvailable);
     }
     private static HostPreservationPayloadBinding Bind(byte[] bytes,uint offset=4096)

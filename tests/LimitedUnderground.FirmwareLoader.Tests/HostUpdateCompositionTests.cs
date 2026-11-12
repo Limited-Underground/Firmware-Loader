@@ -265,7 +265,7 @@ internal static class HostUpdateCompositionTests
         using var f = new Fixture();
         var engine = f.Create();
         byte[] admitted = f.Release!.CopyImage();
-        f.Source.Adapter.Read = () => Task.FromResult(new HostReadback((byte[])admitted.Clone(), true));
+        f.Source.Adapter.Read = () => Task.FromResult(HostRegionCheck.Of((byte[])admitted.Clone(), true));
         f.Source.Image[0] ^= 0xff;
         f.Binding!.CopyBytesAt(0)[0] ^= 0xff;
         Require(engine.Select(f.Source.Selection), "caller copy changes cannot alter retained binding");

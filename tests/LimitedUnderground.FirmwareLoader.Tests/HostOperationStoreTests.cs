@@ -695,7 +695,7 @@ internal static class HostOperationStoreTests
         string phase = args.Length == 4 ? args[3] : "write";
         Require(phase is "write" or "read" or "boot", "child submission phase");
         if (phase == "write") f.Adapter.Write = () => { Ack("submitted"); return pending.Task; };
-        else if (phase == "read") f.Adapter.Read = async () => { Ack("submitted"); await pending.Task; return new HostReadback(f.Image, true); };
+        else if (phase == "read") f.Adapter.Read = async () => { Ack("submitted"); await pending.Task; return HostRegionCheck.Of(f.Image, true); };
         else f.Adapter.Boot = async () => { Ack("submitted"); await pending.Task; return new HostBootResult(f.Manifest.ImageDigest, true, true); };
         var profile = f.Profile with { WriteMilliseconds = mode == "timeout" ? 250 : 10000, TotalMilliseconds = 20000 };
         var engine = Engine(f, durable, profile: profile); Require(engine.Select(f.Selection), "child selected");
