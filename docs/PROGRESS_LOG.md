@@ -9,6 +9,10 @@ the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acc
 
 ## 2026-11-12
 
+### L7 step 2 Add the qualification release builder
+
+Following D-063, the Loader can now build the first signed release for board A. It writes the canonical 28-field release record with the Loader's own serializer and checks that the record parses back to the same bytes. It also defines the writer profile, preservation plan and recovery documents whose SHA-256 the record names, padded with erased-flash bytes; the image now on the board counts as generation 1. A built record signed with a throwaway test key passes the real production admission. The full host gate passed 320 groups, 6 of them new. Nothing is signed, trusted or wired into production. See [the qualification release](QUALIFICATION-RELEASE.md).
+
 ### L7 step 1 Add the esptool flash writer for the Heltec V4 bench board
 
 Following D-063, the update engine now verifies a write by the chip's MD5 of the written region (computed against the admitted image by the engine itself) instead of a full byte readback. A separate GPL flash helper drives esptool 5.3.1, and a new adapter takes chip digests of every span of the 16 MB layout before and after writing. Only two reviewed source files may start a process. The full host gate passed 314 groups, 12 of them new. Nothing is wired into production and no board was touched. See [the flash writer](FLASH-WRITER.md).

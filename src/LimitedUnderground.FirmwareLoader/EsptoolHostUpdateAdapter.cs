@@ -178,3 +178,42 @@ internal sealed class EsptoolHostUpdateAdapter : IHostUpdateAdapter
         return result.Json;
     }
 }
+
+// Neutral names for the bench writer facts other code needs (the release builder), so that only
+// this reviewed file names the flashing tool.
+internal static class BenchFlash
+{
+    internal const string AdapterName = EsptoolHostUpdateAdapter.AdapterName;
+    internal const string Target = EsptoolHostUpdateAdapter.Target;
+    internal const uint AppOffset = EsptoolHostUpdateAdapter.AppOffset, AppEnd = EsptoolHostUpdateAdapter.AppEnd;
+    internal const uint FlashSize = EsptoolHostUpdateAdapter.FlashSize, Sector = EsptoolHostUpdateAdapter.Sector;
+    internal static (uint Offset, uint Length)[] Layout => EsptoolHostUpdateAdapter.Layout;
+    internal static EsptoolAdapterLimits Limits => EsptoolAdapterLimits.Bench;
+    internal static (uint Offset, uint Length)[] SpansFor(uint offset, int length) => EsptoolHostUpdateAdapter.SpansFor(offset, length);
+
+    // LU-WRITER-PROFILE-V1: its SHA-256 is the release record's writerProfileDigest (L7 step 2).
+    internal static byte[] WriterProfile(string helperSha256)
+    {
+        if (helperSha256.Length != 64 || !helperSha256.All(c => c is >= '0' and <= '9' or >= 'A' and <= 'F'))
+            throw new ArgumentException("helper digest");
+        var limits = EsptoolAdapterLimits.Bench;
+        return QualificationReleaseBuilder.Json(w =>
+        {
+            w.WriteString("format", "LU-WRITER-PROFILE-V1");
+            w.WriteString("adapter", EsptoolHostUpdateAdapter.AdapterName);
+            w.WriteString("esptool", "5.3.1");
+            w.WriteString("helperSha256", helperSha256);
+            w.WriteString("chip", "ESP32-S3");
+            w.WriteNumber("usbVendor", EsptoolHostUpdateAdapter.UsbVendor);
+            w.WriteNumber("usbProduct", EsptoolHostUpdateAdapter.UsbProduct);
+            w.WriteNumber("flashSize", EsptoolHostUpdateAdapter.FlashSize);
+            w.WriteNumber("appOffset", EsptoolHostUpdateAdapter.AppOffset);
+            w.WriteNumber("sector", EsptoolHostUpdateAdapter.Sector);
+            w.WriteNumber("attempts", 1);
+            w.WriteString("verification", "chip-md5-every-span-before-and-after");
+            w.WriteNumber("writeSeconds", (long)limits.Write.TotalSeconds);
+            w.WriteNumber("digestSeconds", (long)limits.Digests.TotalSeconds);
+            w.WriteNumber("bootSeconds", (long)limits.Boot.TotalSeconds);
+        });
+    }
+}

@@ -58,6 +58,7 @@ var tests = new (string Name, Action Run)[]
 .Concat(D5FiniteWriterContractTests.All)
 .Concat(ReleaseTrustAnchorTests.All)
 .Concat(EsptoolHostUpdateAdapterTests.All)
+.Concat(QualificationReleaseTests.All)
 .Concat(HostOperationStoreTests.All)
 .Concat(RestrictedTokenStoreTests.All)
 .Concat(MachineRecoveryStorePolicyTests.All)
