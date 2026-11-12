@@ -9,6 +9,7 @@ if (HostOperationStoreTests.TryRunChild(args)) return;
 if (args.Length != 2) throw new InvalidOperationException("Usage: tests <source-root> <fresh-screenshot-directory>");
 LoaderUpdateUiTests.Output = ScreenshotOutput.Admit(args[0], args[1]);
 var repositoryRoot = Path.GetFullPath(args[0]);
+ReleaseTrustAnchorTests.RepositoryRoot = repositoryRoot;
 
 var tests = new (string Name, Action Run)[]
 {
@@ -55,6 +56,7 @@ var tests = new (string Name, Action Run)[]
 .Concat(ProductionReleaseManifestTests.All)
 .Concat(ProductionUpdateCompositionTests.All)
 .Concat(D5FiniteWriterContractTests.All)
+.Concat(ReleaseTrustAnchorTests.All)
 .Concat(HostOperationStoreTests.All)
 .Concat(RestrictedTokenStoreTests.All)
 .Concat(MachineRecoveryStorePolicyTests.All)
