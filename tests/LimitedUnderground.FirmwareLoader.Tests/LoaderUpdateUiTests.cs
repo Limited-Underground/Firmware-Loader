@@ -21,6 +21,7 @@ internal static class LoaderUpdateUiTests
         ("UI recovery requires separately admitted original and confirmation", () => Sta(Recovery)),
         ("UI private exception and identifier strings never enter visible projection", () => Sta(Privacy)),
         ("UI actual MainWindow hosts blocked panel and renders at minimum size", () => Sta(MainWindowIntegration)),
+        ("UI support file has fixed fields only and no identifiers", () => Sta(SupportFile)),
     };
     private static void Require(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
     private static void Sta(Action action)
@@ -67,7 +68,7 @@ internal static class LoaderUpdateUiTests
         ((CheckBox)panel.FindName("ConfirmationBox")).IsChecked = true; Drain();
         Require(panel.Workflow.Confirmed, "actual CheckBox confirmation binds");
     }
-    private static void Render(FrameworkElement element, string name, int width = 650, int height = 570)
+    private static void Render(FrameworkElement element, string name, int width = 650, int height = 760)
     {
         var root = new Border { Background = Brushes.LightGray, Padding = new Thickness(12), Child = element, Width = width, Height = height };
         try
@@ -79,11 +80,17 @@ internal static class LoaderUpdateUiTests
         }
         finally { root.Child = null; }
     }
+    private static string StepCodes(LoaderUpdateWorkflow m) => string.Concat(m.Steps.Select(s => s.Status switch
+    {
+        LoaderStepStatus.Done => 'D', LoaderStepStatus.Active => 'A', LoaderStepStatus.Failed => 'F',
+        LoaderStepStatus.NotReached => '-', _ => 'w',
+    }));
     private static void Production()
     {
         var panel = new LoaderUpdatePanel(); Drain();
         Require(panel.Workflow.Choices.Count == 0 && !panel.Workflow.CanStart && !panel.Workflow.CanChoose && !panel.Workflow.CanConfirm, "no production operation");
         Require(!((Button)panel.FindName("StartButton")).IsEnabled, "production actual button disabled");
+        Require(StepCodes(panel.Workflow) == "wwww" && panel.Workflow.ProgressValue == 0 && !panel.Workflow.CanSaveSupportFile, "production: no steps reached");
         Render(panel, "01-production-blocked");
     }
     private static void Selection()
@@ -92,6 +99,8 @@ internal static class LoaderUpdateUiTests
         Require(((ComboBox)p.FindName("DeviceList")).SelectedIndex == -1 && !m.CanStart, "no automatic selection");
         Render(p, "02-unselected"); Select(p); Require(m.CanConfirm && !m.CanStart, "selection is not confirmation");
         Require(m.ImageDigest.Contains(f.Manifest.ImageDigest, StringComparison.Ordinal) && m.Firmware.Contains("generation 1", StringComparison.Ordinal), "exact admitted firmware visible");
+        Require(StepCodes(m) == "Dwww" && m.ProgressValue == 0.25 && m.NextStep.StartsWith("Tick", StringComparison.Ordinal), "preflight is step 1 done");
+        Require(m.Summary.Contains("release generation 1", StringComparison.Ordinal), "plain summary names the release");
         Render(p, "03-preflight-ready"); Confirm(p); Require(m.CanStart, "explicit confirmation enables exact fixture attempt");
         Wait(Start(p)); Require(m.Heading == "Update verified" && f.Adapter.Writes == 1 && !m.CanStart, "one attempt only");
         Wait(Start(p)); Require(f.Adapter.Writes == 1, "old action cannot resubmit");
@@ -120,7 +129,7 @@ internal static class LoaderUpdateUiTests
         var pending = new TaskCompletionSource(); f.Adapter.Write = () => pending.Task;
         var run = Start(p); ((Button)p.FindName("CancelButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Wait(run);
         Require(m.Heading.StartsWith("Outcome unknown", StringComparison.Ordinal) && !m.CanStart && f.Lease.Held, "cancelled pending command retains uncertainty/lease");
-        Render(p, "07-uncertain"); pending.SetResult(); Drain();
+        Require(StepCodes(m) == "DF--" && m.CanSaveSupportFile, "cancelled write stops at step 2"); Render(p, "07-uncertain"); pending.SetResult(); Drain();
         var choice = m.Choices[0];
         m.SelectedChoice = null;
         Require(m.Heading.Contains("unknown", StringComparison.Ordinal) && !m.CanStart, "deselect cannot hide prior uncertainty");
@@ -135,16 +144,22 @@ internal static class LoaderUpdateUiTests
         using var f = new HostUpdateEngineTests.Fixture(select: false); var m = Model(f); var p = Panel(m); Select(p); Confirm(p);
         var write = new TaskCompletionSource(); var read = new TaskCompletionSource<HostRegionCheck>(); var boot = new TaskCompletionSource<HostBootResult>();
         f.Adapter.Write = () => write.Task; f.Adapter.Read = () => read.Task; f.Adapter.Boot = () => boot.Task;
-        var run = Start(p); m.Refresh(); Require(m.Heading == "Writing update", "real engine writing"); Render(p, "04-writing");
-        write.SetResult(); for(int i = 0; i < 10; i++) { Drain(); Thread.Sleep(1); } m.Refresh(); Require(m.Heading == "Written — verifying bytes", "ack not success"); Render(p, "05-readback");
-        read.SetResult(HostRegionCheck.Of(f.Image, true)); for(int i = 0; i < 10; i++) { Drain(); Thread.Sleep(1); } m.Refresh(); Require(m.Heading == "Bytes verified — checking startup", "bytes not startup"); Render(p, "06-boot-wait");
-        boot.SetResult(new(f.Manifest.ImageDigest, true, true)); Wait(run); Require(m.Heading == "Update verified", "full verification"); Render(p, "08-verified");
+        var run = Start(p); m.Refresh(); Require(m.Heading == "Writing update", "real engine writing");
+        Require(StepCodes(m) == "DAww" && m.NextStep.Contains("plugged in", StringComparison.Ordinal), "write step active"); Render(p, "04-writing");
+        write.SetResult(); for(int i = 0; i < 10; i++) { Drain(); Thread.Sleep(1); } m.Refresh(); Require(m.Heading == "Written — verifying bytes", "ack not success");
+        Require(StepCodes(m) == "DDAw" && m.ProgressValue == 0.5, "verify step active"); Render(p, "05-readback");
+        read.SetResult(HostRegionCheck.Of(f.Image, true)); for(int i = 0; i < 10; i++) { Drain(); Thread.Sleep(1); } m.Refresh(); Require(m.Heading == "Bytes verified — checking startup", "bytes not startup");
+        Require(StepCodes(m) == "DDDA", "start step active"); Render(p, "06-boot-wait");
+        boot.SetResult(new(f.Manifest.ImageDigest, true, true)); Wait(run); Require(m.Heading == "Update verified", "full verification");
+        Require(StepCodes(m) == "DDDD" && m.ProgressValue == 1 && m.NextStep.StartsWith("Done", StringComparison.Ordinal), "all steps done only when verified"); Render(p, "08-verified");
     }
     private static void ReadFailure()
     {
         using var f = new HostUpdateEngineTests.Fixture(select: false); var m = Model(f); var p = Panel(m); Select(p); Confirm(p);
         f.Adapter.Read = () => Task.FromResult(HostRegionCheck.Of(new byte[] { 9 }, false)); Wait(Start(p));
         Require(m.Heading.StartsWith("Outcome unknown", StringComparison.Ordinal) && f.Adapter.Boots == 0, "bad bytes cannot boot or succeed");
+        Require(StepCodes(m) == "DDF-" && m.ProgressValue == 0.5, "failed byte check stops at step 3");
+        Require(m.NextStep.StartsWith("Do not unplug", StringComparison.Ordinal) && m.CanSaveSupportFile, "unknown outcome: plain next step and support file");
     }
     private static void Recovery()
     {
@@ -152,7 +167,8 @@ internal static class LoaderUpdateUiTests
         var m = Model(f); var p = Panel(m); Select(p); Require(m.CanReviewRecovery && !m.CanStart, "unresolved original requires review");
         ((Button)p.FindName("RecoveryButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Require(m.CanConfirm && !m.CanStart && m.ActionLabel == "Restore reviewed original", "separate recovery confirmation");
         Render(p, "09-recovery-ready"); Confirm(p); Wait(Start(p));
-        Require(m.Heading == "Original restored" && m.Detail.Contains("does not make", StringComparison.Ordinal), "recovery outcome distinct"); Render(p, "10-recovered");
+        Require(m.Heading == "Original restored" && m.Detail.Contains("does not make", StringComparison.Ordinal), "recovery outcome distinct");
+        Require(StepCodes(m) == "DDDD" && m.Summary.StartsWith("Put back", StringComparison.Ordinal) && m.NextStep.Contains("support file", StringComparison.Ordinal), "recovery steps and next step"); Render(p, "10-recovered");
     }
     private static void Privacy()
     {
@@ -160,7 +176,32 @@ internal static class LoaderUpdateUiTests
         const string secret = "C:\\private\\sensitive USB-serial-SECRET COM99";
         var m = new LoaderUpdateWorkflow(new[] { f.Selection }, (_, _) => throw new IOException(secret)); var p = Panel(m); Select(p);
         Require(!m.Detail.Contains(secret, StringComparison.Ordinal) && !m.Selection.Contains("COM99", StringComparison.Ordinal), "sanitized factory failure");
-        Require(m.Heading == "Preflight blocked" && !m.CanStart, "no operation after factory failure"); Render(p, "11-preflight-blocked");
+        Require(m.Heading == "Preflight blocked" && !m.CanStart, "no operation after factory failure");
+        Require(!m.Summary.Contains("COM99", StringComparison.Ordinal) && !m.NextStep.Contains("COM99", StringComparison.Ordinal), "plain lines carry no identifiers"); Render(p, "11-preflight-blocked");
+    }
+    private static void SupportFile()
+    {
+        using var f = new HostUpdateEngineTests.Fixture(select: false); var m = Model(f); var p = Panel(m); Select(p); Confirm(p);
+        f.Adapter.Read = () => Task.FromResult(HostRegionCheck.Of(new byte[] { 9 }, false)); Wait(Start(p));
+        var report = m.SupportReport(new DateTimeOffset(2026, 11, 13, 12, 0, 0, TimeSpan.Zero), "test-version");
+        foreach (var expected in new[] { "Created (UTC): 2026-11-13 12:00:00", "Loader version: test-version", "Session: simulated review",
+                     "Steps: Check the board: done; Write the firmware: done; Verify the written bytes: stopped here; Check that it starts: not reached",
+                     "Write started: yes", "Bytes verified: no", "Stop reason code: independent-readback", "Image SHA-256: " + f.Manifest.ImageDigest })
+            Require(report.Contains(expected, StringComparison.Ordinal), "support file field: " + expected);
+        // Only fixed labelled lines: every line is one of the known fields.
+        var labels = new[] { "Limited Underground Firmware Loader - support file", "Created (UTC):", "Loader version:", "Session:", "Mode:", "Status:", "Detail:", "Steps:",
+            "Earlier attempt unresolved:", "Engine state:", "Stop reason code:", "Binding check:", "Write started:", "Bytes verified:",
+            "Safety journal kept its record:", "Release generation:", "Release compatibility:", "Image bytes:", "Image SHA-256:" };
+        foreach (var line in report.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
+            Require(labels.Any(l => line.StartsWith(l, StringComparison.Ordinal)), "unexpected support file line");
+        Require(!report.Contains("COM", StringComparison.Ordinal) && !report.Contains(":\\", StringComparison.Ordinal) && !report.Contains(f.Selection.Identity.ToString() ?? "\0", StringComparison.Ordinal),
+            "no port, path or device identity");
+        // A factory failure carrying private text cannot reach the file.
+        const string secret = "C:\\private\\sensitive USB-serial-SECRET COM99";
+        var blocked = new LoaderUpdateWorkflow(new[] { f.Selection }, (_, _) => throw new IOException(secret)); var bp = Panel(blocked); Select(bp);
+        var blockedReport = blocked.SupportReport(DateTimeOffset.UnixEpoch, "v");
+        Require(!blockedReport.Contains("SECRET", StringComparison.Ordinal) && !blockedReport.Contains("COM99", StringComparison.Ordinal), "sanitized support file");
+        Require(((Button)p.FindName("SupportButton")).IsEnabled, "support button enabled after an attempt");
     }
     private static void MainWindowIntegration()
     {

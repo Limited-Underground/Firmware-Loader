@@ -180,12 +180,12 @@ public partial class MainWindow : Window
         catch (Exception) { pythonSha = null; }
         if (pythonSha is null)
         {
-            ShowInstallMessage("Flash tool not found", "The ESP-IDF Python environment was not found on this PC. Nothing was written.");
+            ShowInstallMessage("Flash tool not found", "The ESP-IDF Python environment was not found on this PC. Nothing was written. This PC is not set up for installing yet; ask for the tester package.");
             return;
         }
         var board = BenchFlash.CreateBoard(new ProcessFlashHelperRunner(new FlashHelperInstall(python, pythonSha, helper, BenchFlash.HelperSha256)));
         InstallReleaseButton.IsEnabled = false;
-        ShowInstallMessage("Checking the release and the board", "Reading the connected board (read-only). This takes about a minute.");
+        ShowInstallMessage("Step 1 of 4: checking the release and the board", "Reading the connected board without changing it. This takes about a minute. Keep the board plugged in.");
         try
         {
             var prepared = await QualificationInstaller.PrepareAsync(session, dialog.FolderName, board, pin,
@@ -199,7 +199,7 @@ public partial class MainWindow : Window
         }
         catch (Exception)
         {
-            ShowInstallMessage("Preparation stopped", "The board or the flash tool did not respond as expected. Nothing was written.");
+            ShowInstallMessage("Preparation stopped", "The board or the flash tool did not respond as expected. Nothing was written. Unplug the board, plug it back in and try again. If it happens again, report it with the time it happened.");
         }
         finally
         {
