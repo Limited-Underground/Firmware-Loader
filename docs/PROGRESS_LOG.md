@@ -9,6 +9,10 @@ the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acc
 
 ## 2026-11-13
 
+### I-036 Take the board state from the board when building a release
+
+The first real release was nearly built against the bootloader in the current Trail build, but board A runs an older one, so admission would have refused it on the board. The release builder now takes the board's current state from the board: `--current-app` (the exact app image last written) and `--boot-readback` (a read-back of the boot area, of which the first 0x8000 bytes are used). A new host test covers it.
+
 ### L8 Take the board generation from the signed record
 
 After L7, board A runs generation 2, but the install path assumed generation 1 for any board whose app matched the record, so a restore release would have been refused. The board's generation now comes from the signed record (minimum = maximum) once the chip checksum proves the board runs exactly that app. A new host test installs a generation-3 restore release on a simulated board at generation 2. The footer now says when a board A install session can write firmware. Full host gate: 331 groups pass.

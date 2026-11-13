@@ -36,6 +36,17 @@ internal static class QualificationReleaseBuilder
         return bytes;
     }
 
+    // I-036: the bench bootloader region is 0x0..0x8000. The board's required bootloader state is
+    // taken from a read-back of the board itself (at least that long), never from a build folder:
+    // board A ran an older bootloader than the current builds.
+    internal const int BootloaderRegionLength = 0x8000;
+
+    internal static byte[] BootloaderRegionFromReadback(byte[] readback)
+    {
+        if (readback.Length < BootloaderRegionLength) throw new ArgumentException("the read-back must cover 0x0..0x8000");
+        return readback.AsSpan(0, BootloaderRegionLength).ToArray();
+    }
+
     internal static string ChipIdentity(uint offset, byte[] bytes) =>
         "chip-md5:0x" + offset.ToString("X") + ":" + bytes.Length + ":" + HostRegionCheck.Md5Hex(bytes);
 
