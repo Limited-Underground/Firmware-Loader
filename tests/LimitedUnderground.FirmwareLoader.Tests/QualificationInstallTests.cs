@@ -13,6 +13,7 @@ internal static class QualificationInstallTests
     internal static IReadOnlyList<(string Name, Action Run)> All { get; } = new (string, Action)[]
     {
         ("L7 install: signed release on board A writes, verifies and boots", InstallsOnBoardA),
+        ("L8 install: a restore release (generation 3) installs on a board at generation 2", RestoreFromGeneration2),
         ("L7 install: a different board is refused before any write", RefusesOtherBoard),
         ("L7 install: declining to set board A is refused before any write", RefusesWithoutPin),
         ("L7 install: wrong current firmware on the board is refused before any write", RefusesWrongCurrentFirmware),
@@ -46,7 +47,7 @@ internal static class QualificationInstallTests
         internal byte[] Before;
         internal long Now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        internal Bench(Action<JsonObject>? change = null, bool sign = true)
+        internal Bench(Action<JsonObject>? change = null, bool sign = true, ulong generation = 2, ulong currentGeneration = 1)
         {
             Directory.CreateDirectory(Root);
             Board = BenchFlash.CreateBoard(Helper);
@@ -56,7 +57,7 @@ internal static class QualificationInstallTests
             Before = (byte[])Helper.Flash.Clone();
             Require(Controller.SelectProduct("opentrail"), "select product");
             var release = QualificationReleaseBuilder.Build(new QualificationInputs(Candidate, Current, Boot, "trail/8f3c18a test",
-                2, 1, 1, Now - 1000, BenchFlash.HelperSha256));
+                generation, currentGeneration, 1, Now - 1000, BenchFlash.HelperSha256));
             var node = JsonNode.Parse(release.Manifest)!.AsObject();
             node["publicKeyFingerprint"] = HostReleaseAdmission.Digest(Key.ExportSubjectPublicKeyInfo());
             var bytes = Encoding.UTF8.GetBytes(node.ToJsonString());
@@ -105,6 +106,28 @@ internal static class QualificationInstallTests
                 "every other byte unchanged");
         Require(bench.Helper.Commands.Count(c => c == "write") == 1 && bench.Helper.Commands.Count(c => c == "boot") == 1, "one write, one boot");
         Require(bench.Store is not null && !bench.Store.HasUnresolvedOperation, "journal resolved");
+    }
+
+    private static void RestoreFromGeneration2()
+    {
+        using var bench = new Bench(generation: 3, currentGeneration: 2);
+        var prepared = bench.Prepare();
+        Require(prepared.Workflow is not null, "restore prepared: " + prepared.Heading + " " + prepared.Detail);
+        var workflow = prepared.Workflow!;
+        workflow.SelectedChoice = workflow.Choices[0];
+        workflow.Confirmed = true;
+        workflow.StartAsync().GetAwaiter().GetResult();
+        Require(workflow.Heading == "Update verified", "restore verified: " + workflow.Heading + " / " + workflow.Detail);
+        var padded = QualificationReleaseBuilder.Pad(bench.Candidate);
+        Require(bench.Helper.Flash.AsSpan((int)BenchFlash.AppOffset, padded.Length).SequenceEqual(padded), "restore image on the board");
+        Require(QualificationInstall.ObservedState(ParsedManifest(bench), "x", "y", BenchFlash.HelperSha256).Generation == 0,
+            "a board whose app does not match is generation 0");
+    }
+
+    private static ProductionReleaseManifest ParsedManifest(Bench bench)
+    {
+        Require(ProductionReleaseManifest.TryParse(File.ReadAllBytes(Path.Combine(bench.Folder, "release.json")), out var m) && m is not null, "parse");
+        return m!;
     }
 
     private static void RefusesOtherBoard()

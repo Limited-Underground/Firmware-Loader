@@ -7,6 +7,12 @@ does not imply that acceptance occurred on its original report date. Current
 engineering state and sequencing remain in [project status](PROJECT_STATUS.md) and
 the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acceptance.
 
+## 2026-11-13
+
+### L8 Take the board generation from the signed record
+
+After L7, board A runs generation 2, but the install path assumed generation 1 for any board whose app matched the record, so a restore release would have been refused. The board's generation now comes from the signed record (minimum = maximum) once the chip checksum proves the board runs exactly that app. A new host test installs a generation-3 restore release on a simulated board at generation 2. The footer now says when a board A install session can write firmware. Full host gate: 331 groups pass.
+
 ## 2026-11-12
 
 ### L7 step 5 Wire the board A qualification install into the Loader

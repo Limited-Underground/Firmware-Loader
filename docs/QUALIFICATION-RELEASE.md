@@ -55,12 +55,12 @@ In the window, **Install signed qualification release**:
 2. Opens a signed release folder: `release.json`, `release.sig`, `raw.bin`, `padded.bin`.
 3. Needs exactly one connected board (USB ID `303A:1001`). It reads the board's MAC address (read-only).
 4. **Board A:** the first time, it asks to set the connected board as board A. It then stores the SHA-256 of its MAC, together with the SHA-256 of the ESP-IDF `python.exe`, in `ProgramData\LimitedUnderground.FirmwareLoader.Qualification\`. From then on any other board is refused, and the Loader offers no way to change board A.
-5. Reads, read-only, the chip's checksums of the bootloader and the app now on the board. Unless they match the record's required board state, the release is not admitted. A board with the expected app counts as generation 1.
+5. Reads, read-only, the chip's checksums of the bootloader and the app now on the board. Unless they match the record's required board state, the release is not admitted. The record names that app's generation (minimum = maximum). When the chip's checksum proves the board runs that app, the board counts as being at that generation: 1 for the pre-L7 bench image, 2 after L7. A restore release is therefore an ordinary signed release with a higher generation (I-037).
 6. Runs full production admission against the pinned key and the fixed qualification policy. The policy fixes the target, layout, allowed region `0x10000`+`0x4F0000`, protected region `0x0`+`0x10000` and minimum generation 2. The expiry and the recovery image come from the signed record. The admission clock is kept in the same administrator-only folder.
 7. Builds the bundle the update engine checks before each command, in memory from the admitted record (inspection never trusts it). It then offers the one board as the only choice in the existing update workflow, labelled as a real write.
 8. The engine accepts the reviewed writer adapter alongside the host fixture. After one confirmation it writes, verifies by the chip's checksum of every region, and waits for the boot line.
 
-The flash helper now also accepts Trail's `lu_ident … partition=0x10000 … self_check=PASS` line (Trail PR #245) as the boot check, so the writer profile digest changed. A release must therefore be built from this version of the Loader. Restoring the previous firmware (L8) uses its own signed release and is not part of this path.
+The flash helper now also accepts Trail's `lu_ident … partition=0x10000 … self_check=PASS` line (Trail PR #245) as the boot check, so the writer profile digest changed. A release must therefore be built from this version of the Loader. Restoring the previous firmware (L8) uses the same path, with its own signed release: the earlier image at the next generation. While a board A session is active, the window's footer says the session can write firmware (I-038).
 
 ## Tests
 

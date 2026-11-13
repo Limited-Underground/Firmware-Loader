@@ -38,7 +38,6 @@ internal sealed record QualificationReleaseFiles(byte[] Manifest, byte[] Signatu
 internal static class QualificationInstall
 {
     internal const ulong MinimumGeneration = 2;
-    internal const ulong CurrentGenerationWithoutIdentityLine = 1; // the bench image on board A before L7 (D-063)
 
     // The Loader-side policy. Values are fixed here; only the expiry and the recovery image come
     // from the signed record, which production admission has verified against the pinned key.
@@ -98,7 +97,12 @@ internal static class QualificationInstall
             TryParseChipIdentity(required, out _, out _, out var md5) && actual == md5 ? required : "chip-md5:mismatch";
         string boot = Observe(manifest.Text("requiredBootloader"), bootMd5);
         string firmware = Observe(manifest.Text("requiredCurrentFirmware"), appMd5);
-        ulong generation = firmware == manifest.Text("requiredCurrentFirmware") ? CurrentGenerationWithoutIdentityLine : 0;
+        // The signed record names the exact app the board must run and that app's generation
+        // (minimum = maximum). When the chip checksum proves the board runs that app, the board is at
+        // that generation (I-037): generation 1 for the pre-L7 bench image, 2 after L7, and so on.
+        ulong expected = manifest.Number("minimumCurrentGeneration");
+        ulong generation = firmware == manifest.Text("requiredCurrentFirmware") &&
+            expected == manifest.Number("maximumCurrentGeneration") ? expected : 0;
         return new(ProductionReleaseManifest.Profile, boot, firmware, generation,
             HostReleaseAdmission.Digest(QualificationReleaseBuilder.WriterProfile(helperSha256)),
             HostReleaseAdmission.Digest(QualificationReleaseBuilder.PreservationPlan()),

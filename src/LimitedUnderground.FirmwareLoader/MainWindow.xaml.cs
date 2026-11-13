@@ -109,8 +109,12 @@ public partial class MainWindow : Window
         InspectionHeading.Focus();
     }
 
+    private const string PreviewFooter = "PREVIEW — INSPECTION ONLY. Firmware installation and recovery are not available.";
+    private const string QualificationFooter = "QUALIFICATION INSTALL — board A only. This session can write firmware to the connected board after one confirmation.";
+
     private void ClearInspection()
     {
+        SafetyFooter.Text = PreviewFooter;
         UpdatePanel.Invalidate();
         InspectionResultPanel.Visibility = Visibility.Collapsed;
         InspectionHeading.Text = string.Empty;
@@ -191,7 +195,7 @@ public partial class MainWindow : Window
                     "Set board A", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes,
                 CancellationToken.None);
             ShowInstallMessage(prepared.Heading, prepared.Detail);
-            if (prepared.Workflow is not null) UpdatePanel.Workflow = prepared.Workflow;
+            if (prepared.Workflow is not null) { UpdatePanel.Workflow = prepared.Workflow; SafetyFooter.Text = QualificationFooter; }
         }
         catch (Exception)
         {
