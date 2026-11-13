@@ -6,7 +6,7 @@ Owner decision D-063 (2026-11-12) sets three rules for the first signed release:
 - The writer is Espressif's esptool, pinned to an exact version.
 - A write is verified by the chip's own checksum instead of a full byte readback. Reading more than 64 KB back over USB fails on the development PC.
 
-This page describes the writer that follows those rules. The writer is **not wired into production**: no update choice uses it, production signer trust stays empty, and the engine still accepts only the host fixture adapter. Turning it on is a separate later change (L7 step 5).
+This page describes the writer that follows those rules. Since L7 step 5 it is used by exactly one production path, the board A qualification install ([qualification release](QUALIFICATION-RELEASE.md#installing-it-l7-step-5)). The engine accepts it alongside the host fixture adapter. Bundle-inspection trust stays empty.
 
 ## Parts
 
@@ -29,7 +29,7 @@ The source-guard test allows process and flashing code in exactly these two C# f
 
 ## Not yet done
 
-- The pinned Python and esptool files are not chosen or downloaded; that needs the owner's approval.
+- D-065: the helper runs on this PC's ESP-IDF Python (esptool 5.3.1). The helper file is pinned in `BenchFlash.HelperSha256`. `python.exe` is pinned by the SHA-256 recorded when board A is set. The esptool package files themselves are not hashed; the helper checks the esptool version.
 - The real-board timings come from the first device session; the values in `EsptoolAdapterLimits.Bench` are first bounds.
 - The writer has not run against a board. Host tests use a fake helper that simulates the 16 MB flash and computes real digests.
-- Production wiring, release building and signing are later L7 steps.
+- The first real run is the device session (L7, then L8), with the owner present.

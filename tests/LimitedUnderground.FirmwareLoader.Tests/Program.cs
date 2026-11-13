@@ -10,6 +10,7 @@ if (args.Length != 2) throw new InvalidOperationException("Usage: tests <source-
 LoaderUpdateUiTests.Output = ScreenshotOutput.Admit(args[0], args[1]);
 var repositoryRoot = Path.GetFullPath(args[0]);
 ReleaseTrustAnchorTests.RepositoryRoot = repositoryRoot;
+QualificationInstallTests.RepositoryRoot = repositoryRoot;
 
 var tests = new (string Name, Action Run)[]
 {
@@ -59,6 +60,7 @@ var tests = new (string Name, Action Run)[]
 .Concat(ReleaseTrustAnchorTests.All)
 .Concat(EsptoolHostUpdateAdapterTests.All)
 .Concat(QualificationReleaseTests.All)
+.Concat(QualificationInstallTests.All)
 .Concat(HostOperationStoreTests.All)
 .Concat(RestrictedTokenStoreTests.All)
 .Concat(MachineRecoveryStorePolicyTests.All)

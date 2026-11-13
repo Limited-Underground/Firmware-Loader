@@ -24,6 +24,9 @@ REQUIRED_FLASH = "16MB"
 SECTOR = 4096
 BOOT_LOADED = "Loaded app from partition at offset 0x10000"
 BOOT_HEALTHY = "companion boot self-check PASS"
+# Trail PR #245: repeated after the self-check and with every heartbeat, so it survives a late port reopen.
+BOOT_IDENT = "lu_ident "
+BOOT_IDENT_HEALTHY = ("partition=0x10000", "self_check=PASS")
 
 
 def emit(obj):
@@ -128,10 +131,10 @@ def cmd_boot(args):
     deadline = time.monotonic() + seconds
     loaded = healthy = False
     lines = 0
-    while time.monotonic() < deadline and not healthy:
+    while time.monotonic() < deadline and not (loaded and healthy):
         try:
             with serial.Serial(args.port, 115200, timeout=0.5) as link:
-                while time.monotonic() < deadline and not healthy:
+                while time.monotonic() < deadline and not (loaded and healthy):
                     raw = link.readline()
                     if not raw:
                         continue
@@ -139,6 +142,8 @@ def cmd_boot(args):
                     text = raw.decode("utf-8", "replace")
                     loaded = loaded or BOOT_LOADED in text
                     healthy = healthy or BOOT_HEALTHY in text
+                    if BOOT_IDENT in text and all(part in text for part in BOOT_IDENT_HEALTHY):
+                        loaded = healthy = True
         except (OSError, serial.SerialException):
             time.sleep(0.2)  # the USB port re-enumerates after reset
     return {"ok": True, "loaded": loaded, "healthy": healthy, "lines": lines}

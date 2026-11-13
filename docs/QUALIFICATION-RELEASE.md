@@ -39,6 +39,29 @@ dotnet run --project tools/ReleaseBuilder -c Release -- --candidate <Trail build
 
 Each build folder is an ESP-IDF build of `heltec_v4_bench`, containing `opentrail_heltec_v4_bench.bin` and `bootloader/bootloader.bin`. The output folder must not already exist.
 
+## Installing it (L7 step 5)
+
+Owner decision D-065 (2026-11-12) set three things:
+
+- the flash helper runs on this PC's ESP-IDF Python, pinned by SHA-256;
+- board A is named only on this PC, as a hash of its MAC address;
+- the administrator-only storage is enrolled once.
+
+[QualificationInstall.cs](../src/LimitedUnderground.FirmwareLoader/QualificationInstall.cs) adds one install path for this release only. Bundle inspection still never marks anything trusted (`LoaderProductionProviders.SignerTrustPolicies` stays empty). Trust comes only from the pinned key (`ReleaseTrustAnchor`, now with the key embedded) through full production admission.
+
+In the window, **Install signed qualification release**:
+
+1. Runs only with administrator rights. The operation journal (`MachineRecoveryStorePolicy`) and the board A pin are administrator-only.
+2. Opens a signed release folder: `release.json`, `release.sig`, `raw.bin`, `padded.bin`.
+3. Needs exactly one connected board (USB ID `303A:1001`). It reads the board's MAC address (read-only).
+4. **Board A:** the first time, it asks to set the connected board as board A. It then stores the SHA-256 of its MAC, together with the SHA-256 of the ESP-IDF `python.exe`, in `ProgramData\LimitedUnderground.FirmwareLoader.Qualification\`. From then on any other board is refused, and the Loader offers no way to change board A.
+5. Reads, read-only, the chip's checksums of the bootloader and the app now on the board. Unless they match the record's required board state, the release is not admitted. A board with the expected app counts as generation 1.
+6. Runs full production admission against the pinned key and the fixed qualification policy. The policy fixes the target, layout, allowed region `0x10000`+`0x4F0000`, protected region `0x0`+`0x10000` and minimum generation 2. The expiry and the recovery image come from the signed record. The admission clock is kept in the same administrator-only folder.
+7. Builds the bundle the update engine checks before each command, in memory from the admitted record (inspection never trusts it). It then offers the one board as the only choice in the existing update workflow, labelled as a real write.
+8. The engine accepts the reviewed writer adapter alongside the host fixture. After one confirmation it writes, verifies by the chip's checksum of every region, and waits for the boot line.
+
+The flash helper now also accepts Trail's `lu_ident … partition=0x10000 … self_check=PASS` line (Trail PR #245) as the boot check, so the writer profile digest changed. A release must therefore be built from this version of the Loader. Restoring the previous firmware (L8) uses its own signed release and is not part of this path.
+
 ## Tests
 
 [QualificationReleaseTests.cs](../tests/LimitedUnderground.FirmwareLoader.Tests/QualificationReleaseTests.cs) cover:
@@ -53,3 +76,18 @@ Each build folder is an ESP-IDF build of `heltec_v4_bench`, containing `opentrai
   - a higher policy floor.
 
 The builder was also run once on the archived Trail `ce6048c` build, into a scratch folder.
+
+[QualificationInstallTests.cs](../tests/LimitedUnderground.FirmwareLoader.Tests/QualificationInstallTests.cs) run the whole install path. They use the real writer adapter on a simulated 16 MB board A and a throwaway key. They check:
+
+- one write, one verify and one boot;
+- the new image is on the board and every other byte is unchanged;
+- refusals before any write for:
+  - a different board;
+  - board A not set;
+  - wrong current firmware;
+  - a changed record;
+  - another key;
+  - no board, or two boards;
+- the real-write label;
+- the bench preservation geometry;
+- the pinned helper digest and the embedded key match the committed files.

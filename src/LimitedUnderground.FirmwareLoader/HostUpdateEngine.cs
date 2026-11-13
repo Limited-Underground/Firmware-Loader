@@ -180,7 +180,8 @@ internal sealed class HostUpdateEngine
         if (actual is null) return HostBindingFault.DeviceDisconnected;
         if (!ReferenceEquals(selection.Identity, actual.Identity) || selection != actual) return HostBindingFault.DeviceChanged;
         if (selection.Generation == 0 || selection.Target != "heltec_v4_bench" ||
-            selection.Model != "HTIT-WB32LAF V4.2" || selection.Adapter != "host-fixture-v1") return HostBindingFault.DeviceNotSupported;
+            selection.Model != "HTIT-WB32LAF V4.2" ||
+            (selection.Adapter != "host-fixture-v1" && selection.Adapter != BenchFlash.AdapterName)) return HostBindingFault.DeviceNotSupported;
         if (!(profile.WriteMilliseconds > 0 && profile.ReadMilliseconds > 0 && profile.BootMilliseconds > 0 &&
             profile.TotalMilliseconds > 0 && profile.MaximumChunk > 0 && profile.MaximumChunk <= 65536 &&
             profile.SideEffectsApproved && profile.BootApproved)) return HostBindingFault.ProfileIncomplete;
