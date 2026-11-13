@@ -94,7 +94,7 @@
         </Border>
 
         <Border Grid.Row="2" Background="#FFFFE1" BorderBrush="#808000" BorderThickness="1" Padding="12">
-            <TextBlock Text="PREVIEW — INSPECTION ONLY. Firmware installation and recovery are not available."
+            <TextBlock x:Name="SafetyFooter" Text="PREVIEW — INSPECTION ONLY. Firmware installation and recovery are not available."
                        FontWeight="Bold" TextWrapping="Wrap" />
         </Border>
     </Grid>
