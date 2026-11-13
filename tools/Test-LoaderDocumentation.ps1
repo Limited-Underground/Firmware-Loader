@@ -194,11 +194,11 @@ function Get-LoaderDocumentationReport([string]$Root, [hashtable]$Overrides = @{
     if ($provider -notmatch 'Array\.Empty<LoaderSignerTrustPolicy>\(\)') {
         Add-Issue 'InspectionBoundary' 'src/LimitedUnderground.FirmwareLoader/OpenTrailInspectionProvider.cs' 'Empty production signer-trust claim requires reconciliation with source.'
     }
-    if ((Get-Current (Get-Text 'CONTRIBUTING.md')) -notmatch '(?i)product development is frozen indefinitely') {
-        Add-Issue 'Authority' 'CONTRIBUTING.md' 'Current owner freeze selection is missing.'
+    if ((Get-Current (Get-Text 'CONTRIBUTING.md')) -notmatch '(?i)owner approves each of these first') {
+        Add-Issue 'Authority' 'CONTRIBUTING.md' 'Current owner approval rules are missing.'
     }
-    if ((Get-Current (Get-Text 'README.md')) -notmatch 'inspection-only') {
-        Add-Issue 'InspectionBoundary' 'README.md' 'Current product inspection-only boundary is missing.'
+    if ((Get-Current (Get-Text 'README.md')) -notmatch '(?i)default session inspects firmware bundles only') {
+        Add-Issue 'InspectionBoundary' 'README.md' 'Current product installation boundary is missing.'
     }
     return [pscustomobject]@{ CurrentDocuments=@($currentDocs | Sort-Object); References=$references; Anchors=$anchors;
         SourceBaseline=$baseline; ModelSha256=$modelHash; Issues=@($issues.ToArray()) }

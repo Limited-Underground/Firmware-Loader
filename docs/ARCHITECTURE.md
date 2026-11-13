@@ -1,6 +1,6 @@
 # Firmware Loader architecture
 
-This maintained description uses [arc42](https://arc42.org/overview/) and [C4](https://c4model.com/diagrams). It maps implemented source at **d74832b1d2579762fc1aea0634ce409a9e4c21ec**. Product development is frozen indefinitely. [Foundation](FOUNDATION.md) distinguishes implemented, demonstrated, intended and unresolved facts; documentation is not product or physical acceptance.
+This maintained description uses [arc42](https://arc42.org/overview/) and [C4](https://c4model.com/diagrams). It maps implemented source at **d74832b1d2579762fc1aea0634ce409a9e4c21ec**. Development is active (owner decision, 2026-11-11). [Foundation](FOUNDATION.md) distinguishes implemented, demonstrated, intended and unresolved facts; documentation is not product or physical acceptance.
 
 ## 1. Introduction and Goals
 
@@ -18,8 +18,8 @@ Goals are bounded parsing, stale-authority refusal, sanitized status and reprodu
 ## 2. Architecture Constraints
 
 - **Implemented:** .NET 10 WPF, net10.0-windows, nullable C# and warnings-as-errors. [global.json](../global.json) requests stable 10.0.100 with latestFeature roll-forward; the wrapper selects installed stable 10.0.x.
-- **Owner constraint:** indefinite November 2 product freeze. Preserve the merged framework baseline; no migration/downgrade, features, devices, signing, release, deployment or merge.
-- **Product boundary:** inspection-only production; choice of provider is not trust, device or operation authority.
+- **Owner constraint:** the owner approves each device session, push, merge, signing step and release (see [CONTRIBUTING](../CONTRIBUTING.md)). Preserve the merged framework baseline; no framework migration or downgrade without a decision.
+- **Product boundary:** inspection by default, plus the signed board A qualification install; choice of provider is not trust, device or operation authority.
 - **Legal/branding:** [Apache-2.0 source](../LICENSE), [branding terms](../BRANDING.md), Preview and recorded naming/release gates.
 - **Evidence limit:** synthetic host tests and WPF renderings are not manual interaction, clean-machine qualification or physical acceptance.
 
@@ -183,7 +183,7 @@ Input/link checks and official model parsing support documentation consistency; 
 - Source-only backups exclude protected holdings; separate internal disks are not off-laptop protection. See [Recovery](RECOVERY.md).
 - Older local framework overlays are retained, not integrated or accepted as current main.
 - Manual operator, clean-machine packaging and naming/release acceptance remain unresolved.
-- The current freeze supersedes old resumption language; documentation does not resume development.
+- The November 2 freeze ended on 2026-11-11; documentation alone grants no device, signing, release or merge authority.
 
 Product selection can never be reused as write approval. A future writer requires, at minimum, exact product provider, exact received-device identity, exact target manifest, admitted signer/release generation, complete address/file/hash plan, bounded attempt count, readback verification, boot confirmation, and accepted recovery plan. Owner authorization remains a separate operation-scoped gate.
 

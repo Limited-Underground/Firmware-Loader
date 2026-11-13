@@ -1,6 +1,6 @@
 # Source recovery and reproducibility
 
-This describes source-file/host recovery, **not** LUF-0010a physical firmware restoration. Product development remains frozen by the November 2, 2026 owner decision.
+This describes source-file/host recovery, **not** LUF-0010a physical firmware restoration. The current development rules are in [CONTRIBUTING](../CONTRIBUTING.md).
 
 ## Declared inputs
 

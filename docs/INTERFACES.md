@@ -1,6 +1,6 @@
 # Interfaces and contract selection
 
-Scope: implemented source at **d74832b1d2579762fc1aea0634ce409a9e4c21ec**. Product development is frozen. This page selects existing authorities; it defines no new protocol.
+Scope: implemented source at **d74832b1d2579762fc1aea0634ce409a9e4c21ec**. Development is active; see [CONTRIBUTING](../CONTRIBUTING.md). This page selects existing authorities; it defines no new protocol.
 
 ## Production-facing boundaries
 
