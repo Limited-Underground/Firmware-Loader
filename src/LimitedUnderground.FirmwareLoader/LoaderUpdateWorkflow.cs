@@ -22,9 +22,11 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     private string heading = "Installation unavailable";
     private string detail = "Trusted release admission and a supported device adapter are not configured. Bundle inspection does not authorize an update.";
     internal LoaderUpdateWorkflow() { Choices = Array.Empty<LoaderDeviceChoice>(); }
-    internal LoaderUpdateWorkflow(IEnumerable<HostSelection> choices, Func<bool, HostSelection, HostUpdateEngine> factory)
+    private readonly bool production;
+    internal LoaderUpdateWorkflow(IEnumerable<HostSelection> choices, Func<bool, HostSelection, HostUpdateEngine> factory, bool production = false)
     {
         this.factory = factory;
+        this.production = production;
         // Never project caller-supplied identifiers/paths into the visible device list.
         Choices = choices.Where(s => s.Target == "heltec_v4_bench" && s.Model == "HTIT-WB32LAF V4.2" && s.Generation != 0)
             .Select((s, i) => new LoaderDeviceChoice(s, i + 1)).ToArray();
@@ -33,8 +35,10 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     }
     public event PropertyChangedEventHandler? PropertyChanged;
     public IReadOnlyList<LoaderDeviceChoice> Choices { get; private set; }
-    public bool IsFixture => factory is not null;
-    public string SessionLabel => IsFixture ? "SIMULATED REVIEW — no physical device operation" : "PREVIEW — inspection only";
+    public bool IsFixture => factory is not null && !production;
+    public bool IsProduction => factory is not null && production;
+    public string SessionLabel => IsProduction ? "QUALIFICATION RELEASE — board A only · writes to the connected board" :
+        IsFixture ? "SIMULATED REVIEW — no physical device operation" : "PREVIEW — inspection only";
     public string Heading => heading;
     public string Detail => detail;
     public string Target => selected is null ? "Target: no device selected" : "Target: Limited Underground Trail · HTIT-WB32LAF V4.2";
@@ -44,7 +48,7 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     public string ImageDigest => engine is null ? "Image SHA-256: unavailable" : $"Image SHA-256: {engine.ReleaseManifest.ImageDigest}";
     public string ActionLabel => recovery ? "Restore reviewed original" : "Start reviewed update";
     public string ConfirmationLabel => recovery ? "I confirm this device and the separately reviewed original recovery image." : "I confirm this device and the reviewed update file for one attempt.";
-    public bool CanChoose => IsFixture && Choices.Count > 0;
+    public bool CanChoose => factory is not null && Choices.Count > 0;
     public bool CanConfirm => engine?.State == HostUpdateState.Ready && !running;
     public bool CanStart => CanConfirm && confirmed && (!uncertain || recovery);
     public bool CanCancel => running || engine?.State == HostUpdateState.Ready;

@@ -46,6 +46,7 @@ internal static class EsptoolHostUpdateAdapterTests
         internal bool CorruptWrite;
         internal bool TouchNvsOnWrite;
         internal bool Refuse;
+        internal (string Port, int Vid, int Pid)[] Ports = { ("COM10", 0x303A, 0x1001), ("COM15", 0x04E8, 0x6860) };
 
         internal FakeHelper() { new Random(7).NextBytes(Flash); }
 
@@ -58,9 +59,7 @@ internal static class EsptoolHostUpdateAdapterTests
             else switch (arguments[0])
             {
                 case "list":
-                    reply = new { ok = true, ports = new object[] {
-                        new { port = "COM10", vid = 0x303A, pid = 0x1001, serial = "x" },
-                        new { port = "COM15", vid = 0x04E8, pid = 0x6860, serial = "y" } } };
+                    reply = new { ok = true, ports = Ports.Select(p => new { port = p.Port, vid = p.Vid, pid = p.Pid, serial = "x" }).ToArray() };
                     break;
                 case "identify": reply = new { ok = true, chip = Chip, mac = "8C:FD:49:B7:09:50", flash = "16MB" }; break;
                 case "digests":

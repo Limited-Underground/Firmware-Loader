@@ -15,7 +15,7 @@ internal sealed record EsptoolAdapterLimits(TimeSpan List, TimeSpan Identify, Ti
         TimeSpan.FromSeconds(240), TimeSpan.FromSeconds(300), TimeSpan.FromSeconds(60), 30);
 }
 
-internal sealed class EsptoolHostUpdateAdapter : IHostUpdateAdapter
+internal sealed class EsptoolHostUpdateAdapter : IBenchBoard
 {
     internal const string AdapterName = "esptool-helper-v1";
     internal const string Target = "heltec_v4_bench";
@@ -49,7 +49,7 @@ internal sealed class EsptoolHostUpdateAdapter : IHostUpdateAdapter
     public HostSelection? CurrentSelection { get { lock (gate) return selection; } }
 
     // Passive: lists ports without opening any. Only the board's own USB ID is offered.
-    internal async Task<IReadOnlyList<string>> FindBoardsAsync(CancellationToken cancellation)
+    public async Task<IReadOnlyList<string>> FindBoardsAsync(CancellationToken cancellation)
     {
         var result = await Run(new[] { "list" }, limits.List, cancellation).ConfigureAwait(false);
         return result.GetProperty("ports").EnumerateArray()
@@ -59,7 +59,7 @@ internal sealed class EsptoolHostUpdateAdapter : IHostUpdateAdapter
     }
 
     // Runs only when the user picks one board. Read-only: chip, MAC and flash size.
-    internal async Task<HostSelection> SelectAsync(string port, CancellationToken cancellation)
+    public async Task<HostSelection> SelectAsync(string port, CancellationToken cancellation)
     {
         lock (gate) selection = null;
         var result = await Run(new[] { "identify", "--port", port }, limits.Identify, cancellation).ConfigureAwait(false);
@@ -138,9 +138,23 @@ internal sealed class EsptoolHostUpdateAdapter : IHostUpdateAdapter
         var result = await Run(new[] { "boot", "--port", board.Port, "--seconds", limits.BootWatchSeconds.ToString() },
             limits.Boot, cancellation).ConfigureAwait(false);
         bool healthy = result.GetProperty("loaded").GetBoolean() && result.GetProperty("healthy").GetBoolean();
-        // Adapter-asserted identity: the app was loaded from the written offset and passed its own
-        // self-check after the chip checksum matched. A firmware-reported identity comes with L7 step 4.
+        // Adapter-asserted identity: the app runs from the written offset and passed its own boot
+        // self-check (bootloader line plus self-check line, or Trail's lu_ident line, Trail PR #245),
+        // after the chip checksum of the written region matched the admitted image.
         return new HostBootResult(healthy ? digest : "", healthy, protectedOk);
+    }
+
+    // Read-only: the chip's MD5 of one region, for the board-state check before admission.
+    public async Task<string?> ChipMd5Async(HostSelection selection, uint offset, uint length, CancellationToken cancellation)
+    {
+        var board = Expect(selection);
+        if (length == 0 || (ulong)offset + length > FlashSize) return null;
+        return (await Digests(board, new[] { (offset, length) }, cancellation).ConfigureAwait(false))[0];
+    }
+
+    public string? MacOf(HostSelection selection)
+    {
+        lock (gate) return ReferenceEquals(selection, this.selection) && selection.Identity is EsptoolBoardIdentity board ? board.Mac : null;
     }
 
     private EsptoolBoardIdentity Expect(HostSelection expected)
@@ -183,6 +197,11 @@ internal sealed class EsptoolHostUpdateAdapter : IHostUpdateAdapter
 // this reviewed file names the flashing tool.
 internal static class BenchFlash
 {
+    // SHA-256 of tools/flash-helper/lu_flash_helper.py, the copy shipped next to the Loader.
+    // A test checks it equals the committed file; the runner refuses any other helper.
+    internal const string HelperSha256 = "26094DB746986CC172A2BB12DB88FA17381BB29A324767568739D5A441DB37EF";
+    internal static IBenchBoard CreateBoard(IFlashHelperRunner runner) => new EsptoolHostUpdateAdapter(runner, EsptoolAdapterLimits.Bench);
+
     internal const string AdapterName = EsptoolHostUpdateAdapter.AdapterName;
     internal const string Target = EsptoolHostUpdateAdapter.Target;
     internal const uint AppOffset = EsptoolHostUpdateAdapter.AppOffset, AppEnd = EsptoolHostUpdateAdapter.AppEnd;

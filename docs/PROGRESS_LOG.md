@@ -9,6 +9,10 @@ the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acc
 
 ## 2026-11-12
 
+### L7 step 5 Wire the board A qualification install into the Loader
+
+Following D-063 to D-065, the Loader now has one production install path: **Install signed qualification release**. It needs administrator rights and opens a signed release folder. It sets board A once (a hash of its MAC, stored only on this PC, in an administrator-only folder) and refuses any other board. It reads the board's current bootloader and app checksums and runs full production admission against the pinned owner key. It then offers one confirmed update through the existing engine: write, chip-checksum verification of every region, boot check. Bundle-inspection trust stays empty. The helper also accepts Trail's `lu_ident` boot line. The full host gate passed 330 groups, 10 of them new; one of them runs the whole install against a simulated board A. No board was touched. See [the qualification release](QUALIFICATION-RELEASE.md#installing-it-l7-step-5).
+
 ### L7 step 2 Add the qualification release builder
 
 Following D-063, the Loader can now build the first signed release for board A. It writes the canonical 28-field release record with the Loader's own serializer and checks that the record parses back to the same bytes. It also defines the writer profile, preservation plan and recovery documents whose SHA-256 the record names, padded with erased-flash bytes; the image now on the board counts as generation 1. A built record signed with a throwaway test key passes the real production admission. The full host gate passed 320 groups, 6 of them new. Nothing is signed, trusted or wired into production. See [the qualification release](QUALIFICATION-RELEASE.md).

@@ -9,4 +9,8 @@
     <AssemblyName>LimitedUnderground.FirmwareLoader</AssemblyName>
     <RootNamespace>LimitedUnderground.FirmwareLoader</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- L7: the separate GPL flash helper ships next to the Loader; its SHA-256 is pinned in BenchFlash. -->
+    <None Include="..\..\tools\flash-helper\lu_flash_helper.py" Link="flash-helper\lu_flash_helper.py" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

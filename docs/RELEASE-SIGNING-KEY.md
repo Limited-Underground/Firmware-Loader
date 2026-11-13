@@ -13,7 +13,7 @@ The owner's key that signs Trail firmware release records. Created 2026-11-12 by
 
 ## What this does and does not do
 
-The key is pinned as the one trust anchor that a future production admission policy must use when the first real release is prepared (V1 checklist L7). It is **not** registered as production signer trust: `LoaderProductionProviders.SignerTrustPolicies` stays empty, no update choice is offered and installation remains disabled. A production policy also needs the accepted target, layout, compatibility, write ranges and recovery image, which come from nominating the first firmware build ([D2 nomination checklist](D2-NOMINATION-CHECKLIST-V1.md)).
+The key is pinned as the one trust anchor that a future production admission policy must use when the first real release is prepared (V1 checklist L7). It is **not** registered as bundle-inspection signer trust: `LoaderProductionProviders.SignerTrustPolicies` stays empty. Since L7 step 5 the key is used by exactly one path, the board A qualification install (D-063 to D-065), which admits a release only through full production admission against this key and a fixed qualification policy ([qualification release](QUALIFICATION-RELEASE.md#installing-it-l7-step-5)). The key is also embedded in the program as DER (`PublicKeySpkiBase64`); a test checks it equals the committed PEM.
 
 [ReleaseTrustAnchorTests](../tests/LimitedUnderground.FirmwareLoader.Tests/ReleaseTrustAnchorTests.cs) check that the pinned fingerprint is the SHA-256 of the committed public key, in the same form `HostReleaseAdmission.Digest` produces; that the key is one complete RSA 3072 public key; that signatures from any other key are rejected; and that production trust stays empty.
 
