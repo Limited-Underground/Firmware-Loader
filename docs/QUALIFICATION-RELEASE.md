@@ -34,10 +34,10 @@ Owner decision D-063 (2026-11-12): the first signed release is a **qualification
 From the Loader checkout, in PowerShell 7:
 
 ```powershell
-dotnet run --project tools/ReleaseBuilder -c Release -- --candidate <Trail build folder> --current <Trail build folder of what is on the board> --source-build-id "<Trail commit and build>" --out <new folder>
+dotnet run --project tools/ReleaseBuilder -c Release -- --candidate <Trail build folder> --current-app <app image last written to the board> --boot-readback <read-back of the board from 0x0, at least 0x8000 bytes> --source-build-id "<Trail commit and build>" --out <new folder>
 ```
 
-Each build folder is an ESP-IDF build of `heltec_v4_bench`, containing `opentrail_heltec_v4_bench.bin` and `bootloader/bootloader.bin`. The output folder must not already exist.
+The candidate folder is an ESP-IDF build of `heltec_v4_bench` containing `opentrail_heltec_v4_bench.bin`. The board's current state comes from the board, not from a build (I-036): `--current-app` is the exact app image last written to it, and `--boot-readback` is a read-back of its boot area, of which the builder uses the first 0x8000 bytes. Board A runs an older bootloader than current builds, so a build's `bootloader.bin` would describe the wrong board. The output folder must not already exist.
 
 ## Installing it (L7 step 5)
 

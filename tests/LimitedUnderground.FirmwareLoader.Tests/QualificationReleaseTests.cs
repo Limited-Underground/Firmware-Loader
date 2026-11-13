@@ -10,6 +10,7 @@ internal static class QualificationReleaseTests
     internal static IReadOnlyList<(string Name, Action Run)> All { get; } = new (string, Action)[]
     {
         ("L7 builder pads with erased-flash bytes to whole sectors", PadsToSectors),
+        ("I-036 builder takes the bootloader region from a board read-back", BootloaderFromReadback),
         ("L7 builder contract documents are canonical and bound to the helper", ContractDocuments),
         ("L7 builder record is canonical, anchored and expires in exactly 180 days", RecordIsCanonical),
         ("L7 builder refuses bad generations and inputs", RefusesBadInputs),
@@ -38,6 +39,18 @@ internal static class QualificationReleaseTests
 
     private static QualificationInputs Inputs() => new(Bytes(604_950, 1), Bytes(604_944, 2), Bytes(22_480, 3),
         "trail-test/abcdef0", 2, 1, 1, 1_800_000_000_000, Helper);
+
+    private static void BootloaderFromReadback()
+    {
+        var readback = Bytes(0x10000, 9);
+        var region = QualificationReleaseBuilder.BootloaderRegionFromReadback(readback);
+        Require(region.Length == 0x8000 && region.AsSpan().SequenceEqual(readback.AsSpan(0, 0x8000)), "first 0x8000 bytes");
+        Throws(() => QualificationReleaseBuilder.BootloaderRegionFromReadback(new byte[0x7FFF]), "short read-back");
+        var release = QualificationReleaseBuilder.Build(Inputs() with { CurrentBootloader = region });
+        Require(ProductionReleaseManifest.TryParse(release.Manifest, out var m) && m is not null &&
+                m.Text("requiredBootloader") == QualificationReleaseBuilder.ChipIdentity(0, region) &&
+                m.Text("requiredBootloader").StartsWith("chip-md5:0x0:32768:", StringComparison.Ordinal), "required bootloader covers the region");
+    }
 
     private static void PadsToSectors()
     {

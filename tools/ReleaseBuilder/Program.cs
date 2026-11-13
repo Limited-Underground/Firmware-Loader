@@ -3,9 +3,12 @@ using System.Globalization;
 using System.Text;
 
 // L7 step 2 release builder. Usage (PowerShell 7, from the Loader checkout):
-//   dotnet run --project tools/ReleaseBuilder -- --candidate <Trail build dir> --current <Trail build dir>
+//   dotnet run --project tools/ReleaseBuilder -- --candidate <Trail build dir>
+//       --current-app <app image now on the board> --boot-readback <read-back of the board from 0x0>
 //       --source-build-id <id> --out <new folder> [--generation 2] [--current-generation 1]
 //       [--policy-revision 1] [--issued-at <UTC Unix ms>]
+// The board's current state comes from the board (I-036): the exact app image last written to it,
+// and a read-back of its boot area (at least 0x8000 bytes), not from a build folder.
 // It never reads a private key and never signs. Signing is a separate owner step (L7 step 3).
 const string AppName = "opentrail_heltec_v4_bench.bin";
 var options = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -22,14 +25,15 @@ try
 {
     string helperPath = Path.Combine(Directory.GetCurrentDirectory(), "tools", "flash-helper", "lu_flash_helper.py");
     if (!File.Exists(helperPath)) return Fail("run this from the Loader checkout (flash helper not found)");
-    string candidate = Path.GetFullPath(Need("candidate")), current = Path.GetFullPath(Need("current"));
+    string candidate = Path.GetFullPath(Need("candidate"));
+    string currentApp = Path.GetFullPath(Need("current-app")), bootReadback = Path.GetFullPath(Need("boot-readback"));
     string output = Path.GetFullPath(Need("out"));
     if (Directory.Exists(output) || File.Exists(output)) return Fail("output folder already exists: " + output);
     long issued = (long)Number("issued-at", (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
     var input = new QualificationInputs(
         File.ReadAllBytes(Path.Combine(candidate, AppName)),
-        File.ReadAllBytes(Path.Combine(current, AppName)),
-        File.ReadAllBytes(Path.Combine(current, "bootloader", "bootloader.bin")),
+        File.ReadAllBytes(currentApp),
+        QualificationReleaseBuilder.BootloaderRegionFromReadback(File.ReadAllBytes(bootReadback)),
         Need("source-build-id"), Number("generation", 2), Number("current-generation", 1), Number("policy-revision", 1), issued,
         HostReleaseAdmission.Digest(File.ReadAllBytes(helperPath)));
     var release = QualificationReleaseBuilder.Build(input);
