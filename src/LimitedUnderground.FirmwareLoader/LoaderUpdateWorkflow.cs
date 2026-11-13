@@ -5,9 +5,31 @@ namespace LimitedUnderground.FirmwareLoader;
 
 internal sealed class LoaderDeviceChoice
 {
-    internal LoaderDeviceChoice(HostSelection selection, int number) { Selection = selection; DisplayName = $"Device {number} · HTIT-WB32LAF V4.2"; }
+    internal LoaderDeviceChoice(HostSelection selection, int number) { Selection = selection; DisplayName = $"Heltec V4 board on USB ({number}) · HTIT-WB32LAF V4.2"; }
     internal HostSelection Selection { get; }
     public string DisplayName { get; }
+}
+
+// One line of the install step list (L9 tester flow). Text only; no device identifiers.
+internal enum LoaderStepStatus { Waiting, Active, Done, Failed, NotReached }
+internal sealed record LoaderStep(string Label, LoaderStepStatus Status)
+{
+    public string Mark => Status switch
+    {
+        LoaderStepStatus.Done => "\u2713",
+        LoaderStepStatus.Active => "\u25B6",
+        LoaderStepStatus.Failed => "\u2717",
+        LoaderStepStatus.NotReached => "-",
+        _ => "\u25CB",
+    };
+    public string StatusText => Status switch
+    {
+        LoaderStepStatus.Done => "done",
+        LoaderStepStatus.Active => "in progress",
+        LoaderStepStatus.Failed => "stopped here",
+        LoaderStepStatus.NotReached => "not reached",
+        _ => "waiting",
+    };
 }
 
 // UI-thread owned. Production has no factory or choices. Tests inject the accepted
@@ -18,6 +40,7 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     private HostUpdateEngine? engine;
     private LoaderDeviceChoice? selected;
     private bool confirmed, running, recovery, uncertain;
+    private int lastStage = -1;  // furthest install step seen while running (0 check .. 3 start)
     private long revision;
     private string heading = "Installation unavailable";
     private string detail = "Trusted release admission and a supported device adapter are not configured. Bundle inspection does not authorize an update.";
@@ -53,6 +76,14 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     public bool CanStart => CanConfirm && confirmed && (!uncertain || recovery);
     public bool CanCancel => running || engine?.State == HostUpdateState.Ready;
     public bool CanReviewRecovery => uncertain && !running && selected is not null;
+    // ---- L9 tester flow: step list, plain summary, next step, support file ----
+    internal static readonly string[] StepLabels = { "Check the board", "Write the firmware", "Verify the written bytes", "Check that it starts" };
+    public IReadOnlyList<LoaderStep> Steps => BuildSteps();
+    public double ProgressValue => Steps.Count(s => s.Status == LoaderStepStatus.Done) / (double)StepLabels.Length;
+    public string Summary => engine is null ? "No firmware release is ready to install yet." :
+        $"{(recovery ? "Put back" : "Install")} Limited Underground Trail, release generation {engine.ReleaseManifest.Generation}, on the selected Heltec V4 board.";
+    public string NextStep => NextStepText();
+    public bool CanSaveSupportFile => engine is not null || uncertain;
     public bool IsBusy => running;
     public bool IsIndeterminate => running;
     public bool Confirmed { get => confirmed; set { confirmed = value && CanConfirm; Changed(); } }
@@ -73,6 +104,7 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     private void Retire()
     {
         revision++;
+        lastStage = -1;
         if (running) uncertain = true;
         try { engine?.Cancel(); } catch (Exception) { uncertain = true; }
         engine = null; running = false; confirmed = false;
@@ -129,7 +161,7 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     {
         if (!CanStart || engine is null) return;
         var operation = engine; var operationRevision = revision;
-        var token = operation.Confirm(); confirmed = false; running = true; Changed();
+        var token = operation.Confirm(); confirmed = false; running = true; lastStage = 1; Changed();
         try { await operation.RunAsync(token); }
         catch (Exception)
         {
@@ -145,6 +177,8 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     {
         if (engine is null) { Changed(); return; }
         var state = engine.State;
+        int stage = StageOf(state);
+        if (running && stage > lastStage) lastStage = stage;
         if (state is HostUpdateState.OutcomeUnknown or HostUpdateState.RecoveryReview) uncertain = true;
         (heading, detail) = state switch
         {
@@ -168,6 +202,102 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
         if (state == HostUpdateState.Recovered) uncertain = false;
         Changed();
     }
+    private static int StageOf(HostUpdateState state) => state switch
+    {
+        HostUpdateState.Ready => 0,
+        HostUpdateState.Writing or HostUpdateState.Recovering => 1,
+        HostUpdateState.Readback or HostUpdateState.RecoveryReadback => 2,
+        HostUpdateState.BootWait or HostUpdateState.RecoveryBootWait => 3,
+        HostUpdateState.Verified or HostUpdateState.Recovered => 4,
+        _ => -1,
+    };
+
+    private IReadOnlyList<LoaderStep> BuildSteps()
+    {
+        var status = new LoaderStepStatus[StepLabels.Length];
+        var state = engine?.State ?? HostUpdateState.DeviceUnselected;
+        int stage = StageOf(state);
+        if (engine is null || state == HostUpdateState.DeviceUnselected)
+        {
+            if (uncertain) { for (int i = 0; i < status.Length; i++) status[i] = LoaderStepStatus.NotReached; }
+        }
+        else if (state == HostUpdateState.NoWriteStopped)
+        {
+            status[0] = LoaderStepStatus.Failed;
+            for (int i = 1; i < status.Length; i++) status[i] = LoaderStepStatus.NotReached;
+        }
+        else if (state is HostUpdateState.OutcomeUnknown or HostUpdateState.RecoveryReview)
+        {
+            // Stopped at the furthest step reached; verified bytes mean the write and the byte check passed.
+            int failed = engine.BytesVerified || engine.Refusal is "boot-identity-health" or "completion-marker" ? 3 :
+                engine.Refusal == "independent-readback" ? 2 : Math.Max(lastStage, engine.AttemptStarted ? 1 : 0);
+            for (int i = 0; i < status.Length; i++)
+                status[i] = i < failed ? LoaderStepStatus.Done : i == failed ? LoaderStepStatus.Failed : LoaderStepStatus.NotReached;
+        }
+        else
+        {
+            for (int i = 0; i < status.Length; i++)
+                status[i] = i < stage || (i == 0 && stage == 0) ? LoaderStepStatus.Done :
+                    i == stage && running ? LoaderStepStatus.Active : LoaderStepStatus.Waiting;
+        }
+        return StepLabels.Select((label, i) => new LoaderStep(label, status[i])).ToArray();
+    }
+
+    private string NextStepText()
+    {
+        if (engine is null)
+            return uncertain ? "Do not retry. Save a support file and send it with a description of what happened." :
+                Choices.Count == 0 ? "Connect one Heltec V4 board and open a signed release." : "Choose the board to install on.";
+        return engine.State switch
+        {
+            HostUpdateState.Ready when uncertain && !recovery => "An earlier install did not finish. Save a support file before doing anything else.",
+            HostUpdateState.Ready => "Tick the confirmation box, then press the button to start. Keep the board plugged in.",
+            HostUpdateState.Writing or HostUpdateState.Readback or HostUpdateState.BootWait or
+            HostUpdateState.Recovering or HostUpdateState.RecoveryReadback or HostUpdateState.RecoveryBootWait =>
+                "Keep the board plugged in until all four steps are done.",
+            HostUpdateState.Verified => "Done. The board is running the new firmware; you can unplug it.",
+            HostUpdateState.Recovered => "The previous firmware is back. Save a support file and report the failed install.",
+            HostUpdateState.NoWriteStopped when engine.BindingFault is HostBindingFault.DeviceDisconnected or HostBindingFault.DeviceChanged =>
+                "Nothing was written. Plug the board back in, choose it again and start again.",
+            HostUpdateState.NoWriteStopped => "Nothing was written. Save a support file if this happens again.",
+            HostUpdateState.OutcomeUnknown or HostUpdateState.RecoveryReview =>
+                "Do not unplug, retry or reset the board. Save a support file and send it before doing anything else.",
+            _ => "Choose the board to install on.",
+        };
+    }
+
+    // Plain-text support file (fixed fields only). Never includes ports, serial numbers, MAC
+    // addresses, paths, keys or other device identifiers (AGENTS.md "Fail-closed safety and privacy").
+    internal string SupportReport(DateTimeOffset now, string loaderVersion)
+    {
+        var lines = new List<string>
+        {
+            "Limited Underground Firmware Loader - support file",
+            $"Created (UTC): {now.UtcDateTime:yyyy-MM-dd HH:mm:ss}",
+            $"Loader version: {loaderVersion}",
+            $"Session: {(IsProduction ? "qualification release" : IsFixture ? "simulated review" : "preview")}",
+            $"Mode: {(recovery ? "put back previous firmware" : "install")}",
+            $"Status: {Heading}",
+            $"Detail: {Detail}",
+            "Steps: " + string.Join("; ", Steps.Select(s => $"{s.Label}: {s.StatusText}")),
+            $"Earlier attempt unresolved: {(uncertain ? "yes" : "no")}",
+        };
+        if (engine is not null)
+        {
+            lines.Add($"Engine state: {engine.State}");
+            lines.Add($"Stop reason code: {(engine.Refusal.Length == 0 ? "none" : engine.Refusal)}");
+            lines.Add($"Binding check: {engine.BindingFault}");
+            lines.Add($"Write started: {(engine.AttemptStarted ? "yes" : "no")}");
+            lines.Add($"Bytes verified: {(engine.BytesVerified ? "yes" : "no")}");
+            lines.Add($"Safety journal kept its record: {(engine.UncertaintyMarkerRetained ? "yes" : "no")}");
+            lines.Add($"Release generation: {engine.ReleaseManifest.Generation}");
+            lines.Add($"Release compatibility: {engine.ReleaseManifest.Compatibility}");
+            lines.Add($"Image bytes: {engine.ReleaseManifest.ImageLength}");
+            lines.Add($"Image SHA-256: {engine.ReleaseManifest.ImageDigest}");
+        }
+        return string.Join(Environment.NewLine, lines) + Environment.NewLine;
+    }
+
     // Fixed status text chosen from the engine's fixed refusal and binding-fault codes only.
     // No adapter, exception or device-identifying text can reach these strings.
     private static (string Heading, string Detail) NoWriteStatus(HostUpdateEngine engine)

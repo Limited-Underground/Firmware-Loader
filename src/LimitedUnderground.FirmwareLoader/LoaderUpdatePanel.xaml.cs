@@ -1,3 +1,6 @@
+using Microsoft.Win32;
+using System.IO;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -23,4 +26,29 @@ public partial class LoaderUpdatePanel : UserControl
     private async void Start_Click(object sender, RoutedEventArgs e) { LastOperation = Workflow.StartAsync(); await LastOperation; }
     private void Cancel_Click(object sender, RoutedEventArgs e) => Workflow.Cancel();
     private void Recovery_Click(object sender, RoutedEventArgs e) => Workflow.ReviewRecovery();
+
+    internal static string LoaderVersion =>
+        typeof(LoaderUpdatePanel).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown";
+
+    // The user chooses where the file goes; its contents are fixed fields (LoaderUpdateWorkflow.SupportReport).
+    private void Support_Click(object sender, RoutedEventArgs e)
+    {
+        if (!Workflow.CanSaveSupportFile) return;
+        var now = DateTimeOffset.UtcNow;
+        var dialog = new SaveFileDialog
+        {
+            Title = "Save a support file",
+            FileName = $"loader-support-{now.UtcDateTime:yyyyMMdd-HHmmss}.txt",
+            Filter = "Text files (*.txt)|*.txt",
+            AddExtension = true,
+            OverwritePrompt = true,
+        };
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
+        try { File.WriteAllText(dialog.FileName, Workflow.SupportReport(now, LoaderVersion)); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show(Window.GetWindow(this), "The support file could not be saved there. Choose another folder.",
+                "Support file not saved", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
 }

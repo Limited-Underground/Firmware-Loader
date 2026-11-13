@@ -9,6 +9,10 @@ the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acc
 
 ## 2026-11-13
 
+### L9 Show install steps, plain wording and a support file
+
+The install panel now shows four steps (check the board, write the firmware, verify the written bytes, check that it starts) with a progress bar, a plain one-line summary, and a bold "what to do now" line for every state; the engine identifiers, firmware generation and image SHA-256 moved into a Details section. A "Save a support file" button writes a text file of fixed labelled fields only (status, steps reached, stop reason code, binding check, release generation and image SHA-256; no ports, serial numbers, MAC addresses, paths or keys). The preparation message now reads as step 1. Safety behaviour, headings and confirmation are unchanged. Host gate `tools/Test-Loader.ps1`: 333 groups pass (one new UI group for the support file; the existing UI groups now also check the step list and next step). Host evidence only; no device was touched.
+
 ### I-036 Take the board state from the board when building a release
 
 The first real release was nearly built against the bootloader in the current Trail build, but board A runs an older one, so admission would have refused it on the board. The release builder now takes the board's current state from the board: `--current-app` (the exact app image last written) and `--boot-readback` (a read-back of the boot area, of which the first 0x8000 bytes are used). A new host test covers it.
