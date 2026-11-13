@@ -9,6 +9,10 @@ the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acc
 
 ## 2026-11-13
 
+### I-040 Replace the November 2 freeze wording with the current rules
+
+The owner ended the November 2 product freeze and its exceptions on 2026-11-11 and approved this documentation update on 2026-11-13. AGENTS.md, CONTRIBUTING.md, README.md, the foundation, architecture, interfaces, project status, recovery and preservation-contract pages and the task plans now state the current rules (owner approves each device session, push, merge, signing step and release) and the current install boundary (inspection by default, plus the signed board A qualification install; other boards and testers wait for their own gates). `tools/Test-LoaderDocumentation.ps1` now requires those two statements instead of the freeze and "inspection-only" wording. The architecture model `workspace.dsl` keeps its d74832b baseline description because it is bound to a verified export. Dated history is unchanged. Documentation checks and their 21 negative fixtures pass.
+
 ### I-036 Take the board state from the board when building a release
 
 The first real release was nearly built against the bootloader in the current Trail build, but board A runs an older one, so admission would have refused it on the board. The release builder now takes the board's current state from the board: `--current-app` (the exact app image last written) and `--boot-readback` (a read-back of the boot area, of which the first 0x8000 bytes are used). A new host test covers it.

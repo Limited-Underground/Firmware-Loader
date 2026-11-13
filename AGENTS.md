@@ -12,11 +12,11 @@
 
 ## Recovery execution
 
-Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source recovery on October 23, 2026. That historical development resumption is superseded by the November 2, 2026 indefinite product-development freeze. Follow the current [foundation reading path](docs/FOUNDATION.md) and CONTRIBUTING.md: authorized preservation, documentation and isolated recovery continue, with the November 3 exception limited to LUF-0009g accepted storage-policy bring-forward and isolated host validation in a clean source-bound topic. Other product development remains frozen. Continue authorized foundation recovery and documentation with clear outcomes and appropriate validation; no fixed response format, duration/file-count refusal, or automatic stop after each task applies. Preserve existing scope and do not perform speculative refactors or silently change an existing mode. Diagnose failures before a supported correction. Physical and publication authority remain separately constrained below.
+Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source recovery on October 23, 2026. That historical resumption was followed by the November 2, 2026 freeze, which the owner ended on 2026-11-11. Development is active: on 2026-11-11 the owner ended the November 2, 2026 product freeze and its exceptions. The owner approves each of these first, every time: a device session (the owner is present), pushing to GitHub, merging, anything involving signing keys or credentials, and releases or deployment. Work that serves an approved task may proceed. Follow the current [foundation reading path](docs/FOUNDATION.md) and CONTRIBUTING.md. Continue authorized foundation recovery and documentation with clear outcomes and appropriate validation; no fixed response format, duration/file-count refusal, or automatic stop after each task applies. Preserve existing scope and do not perform speculative refactors or silently change an existing mode. Diagnose failures before a supported correction. Physical and publication authority remain separately constrained below.
 
 ### Project-specific additions
 
-- During explicitly authorized future product work, preserve existing modes; prefer an explicit new mode or gate over silently changing one. The current freeze permits only the explicit LUF-0009g host exception; it grants no other implementation scope.
+- During product work, preserve existing modes; prefer an explicit new mode or gate over silently changing one.
 - After any physical failure, the next task is diagnosis only until the root cause is isolated.
 - Host success never equals physical acceptance. Always say so explicitly.
 - Keep original recovery, retained modes, and new modes clearly separated; never let cleanup-only or historical bytes become accepted originals.
@@ -27,7 +27,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source rec
 - The first interaction presents exactly Limited Underground Trail and Limited Underground Display as provider choices.
 - Engineering keys remain opentrail and opengauge; public names never become protocol or compatibility identifiers.
 - Selecting Limited Underground Trail or Limited Underground Display selects only a provider namespace. It never grants bundle, signer, device, write, erase, reset, reboot, rollback, recovery, or eFuse authority.
-- Until every target-specific physical-write and recovery gate is separately accepted, the application remains inspection-only and must not expose, advertise, or imply firmware-installation authority.
+- The default session inspects firmware bundles only. The one install path is the signed qualification release for board A (run as administrator; it writes only after the board check, the signature check and one confirmation, then verifies by checksum and startup check). Installing on other boards or for testers waits for its own accepted gates. The application must not expose, advertise or imply installation authority beyond that.
 
 ## Fail-closed safety and privacy
 

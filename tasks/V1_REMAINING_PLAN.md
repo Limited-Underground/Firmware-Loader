@@ -1,6 +1,6 @@
 # V1 remaining task plan
 
-**Current direction — November 2, 2026:** product development is frozen indefinitely. The [current V1 scope/evidence map](../docs/FOUNDATION.md) distinguishes completed host work from unresolved production/physical/release gates. The task scopes and historical status snapshots below retain their IDs and requirements; they are not execution authority. Use approved Limited Underground product names in current prose, while preserving technical keys and historical evidence. Optional Limited Underground Display work is outside the Limited Underground Trail base-V1 release. Only the dedicated Project owns live status.
+**Current direction:** development is active (owner decision, 2026-11-11; the November 2 freeze has ended). The [current V1 scope/evidence map](../docs/FOUNDATION.md) distinguishes completed host work from unresolved production/physical/release gates. The task scopes and historical status snapshots below retain their IDs and requirements; they are not execution authority. Use approved Limited Underground product names in current prose, while preserving technical keys and historical evidence. Optional Limited Underground Display work is outside the Limited Underground Trail base-V1 release. Only the dedicated Project owns live status.
 
 ## Retained history
 

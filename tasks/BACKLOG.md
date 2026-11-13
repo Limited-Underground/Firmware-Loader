@@ -1,6 +1,6 @@
 # Backlog
 
-**Current direction — November 2, 2026:** product development is frozen indefinitely. The [current V1 scope/evidence map](../docs/FOUNDATION.md) distinguishes completed host work from unresolved production/physical/release gates. The task scopes and historical status snapshots below retain their IDs and requirements; they are not execution authority. Use approved Limited Underground product names in current prose, while preserving technical keys and historical evidence. Optional Limited Underground Display work is outside the Limited Underground Trail base-V1 release. Only the dedicated Project owns live status.
+**Current direction:** development is active (owner decision, 2026-11-11; the November 2 freeze has ended). The [current V1 scope/evidence map](../docs/FOUNDATION.md) distinguishes completed host work from unresolved production/physical/release gates. The task scopes and historical status snapshots below retain their IDs and requirements; they are not execution authority. Use approved Limited Underground product names in current prose, while preserving technical keys and historical evidence. Optional Limited Underground Display work is outside the Limited Underground Trail base-V1 release. Only the dedicated Project owns live status.
 
 ## Retained history
 
@@ -16,11 +16,11 @@
 | LUF-005 | next | Add Display inspection provider | Requires an OpenGauge-owned target manifest and evidence boundary; no inferred compatibility |
 | LUF-006 | blocked | Firmware installation and recovery | Requires independent signer verification, exact-device, write/readback/boot/rollback/recovery acceptance for every claimed target |
 
-The introductory status labels above are historical product milestones. In particular, LUF-005 does not select Display work during the current recovery freeze or expand the Trail base-V1 scope. Consult the current GitHub Project and CONTRIBUTING before selecting work.
+The introductory status labels above are historical product milestones. In particular, LUF-005 does not select Display work or expand the Trail base-V1 scope. Consult the current GitHub Project and CONTRIBUTING before selecting work.
 
 ## Checklist task allocations
 
-Historical owner-requested ID allocation follows. The statuses in this allocation table describe that planning snapshot and do not supersede current GitHub Project records or the recovery freeze. Four-digit numbers identify parent tasks; lowercase letter suffixes identify child work. Preserve historical IDs, filenames and accepted evidence. The retired private checklist is provenance only, not a current execution or approval authority. Reconcile overlapping planning and implementation scope before execution; do not perform completed work twice.
+Historical owner-requested ID allocation follows. The statuses in this allocation table describe that planning snapshot and do not supersede current GitHub Project records or the current rules in CONTRIBUTING. Four-digit numbers identify parent tasks; lowercase letter suffixes identify child work. Preserve historical IDs, filenames and accepted evidence. The retired private checklist is provenance only, not a current execution or approval authority. Reconcile overlapping planning and implementation scope before execution; do not perform completed work twice.
 
 | ID | Status | Parent | Task | Acceptance |
 | --- | --- | --- | --- | --- |

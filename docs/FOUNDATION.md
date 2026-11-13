@@ -1,6 +1,6 @@
 # Current V1 scope and engineering reading path
 
-**November 2, 2026: product development is frozen indefinitely.** The November 3 narrow exception additionally permits LUF-0009g accepted policy bring-forward and isolated host validation; [the current host result](testing/LUF-0009g-HOST-BRING-FORWARD-2026-11-03.md) records 237 passing groups. Other development remains frozen. This page selects the existing V1 requirements and current evidence; it grants no implementation, device, signing, release or merge authority. [Project #3](https://github.com/orgs/Limited-Underground/projects/3) owns live task status; historical backlog labels do not select work.
+**Development is active (owner decision, 2026-11-11).** The November 2 product freeze and its exceptions have ended; [CONTRIBUTING](../CONTRIBUTING.md) has the current rules. This page selects the existing V1 requirements and current evidence; it grants no implementation, device, signing, release or merge authority. [Project #3](https://github.com/orgs/Limited-Underground/projects/3) owns live task status; historical backlog labels do not select work.
 
 ## Product and accepted V1 boundary
 
@@ -19,7 +19,7 @@ Source facts below map to merged .NET 10 main **d74832b1d2579762fc1aea0634ce409a
 | Synthetic host work | Fixture authenticity/admission, finite engine/update UI, durable uncertainty, immutable multi-range preservation, payload snapshots and pure consistency preflight. | [Host matrix](testing/LUF-0010a-HOST-MATRIX-2026-10-01.md), [binding contract](HOST-PRESERVATION-BINDING-ADMISSION-CONTRACT.md), source/test links in Architecture. No production adapter, engine factory or storage enrollment follows from these tests. |
 | Windows source reconstruction/build | Fresh remote source retrieval and exact-source hosted run41523963520 passed both warning-as-error Release builds/full host process with SDK10.0.403, PowerShell7.6.9; environment restored. | [Recovery](RECOVERY.md) owns checkout/artifact identities, isolation and independent PASS. No duplicate local build is required. Numeric counts/renderings/raw receipts/output hashes are absent from the sanitized artifact and are not claimed. |
 | Architecture presentation | All twelve arc42 sections; C4 context/container/component views, officially validated/exported with pinned Structurizr. | [Model and current export pins](architecture/README.md). Syntax/rendering is not product acceptance. ISO/IEC/IEEE 42010:2022 is a review reference, with no conformance claim. |
-| Supported installation/release | Incomplete. Production remains inspection-only; physical, package, clean-machine, signing and release gates remain open. | Existing acceptance below. Host success is never physical acceptance. |
+| Supported installation/release | Incomplete. The default session inspects only; the signed board A qualification release installed and was restored on hardware (L7, L8). Tester package, clean-machine, field release and release gates remain open. | Existing acceptance below. Host success is never physical acceptance. |
 
 ## Existing V1 acceptance still required
 
