@@ -4,7 +4,7 @@ This maintained description uses [arc42](https://arc42.org/overview/) and [C4](h
 
 ## 1. Introduction and Goals
 
-Limited Underground Firmware Loader — Preview is one Windows utility for Limited Underground Trail and Limited Underground Display. **Implemented:** production selects a family and inspects a local Trail candidate offline. **Intended, not enabled:** separately accepted installation/recovery for each supported target.
+Limited Underground Firmware Loader — Preview is one Windows utility for Limited Underground MeshTrail and Limited Underground Display. **Implemented:** production selects a family and inspects a local MeshTrail candidate offline. **Intended, not enabled:** separately accepted installation/recovery for each supported target.
 
 | Stakeholder | Concern |
 | --- | --- |
@@ -31,7 +31,7 @@ This project is the shared customer-tool boundary. It does not own Limited Under
 | --- | --- |
 | Operator / Windows picker | Explicit product choice and one read-only candidate stream; no automatic device selection. |
 | Windows filesystem | Untrusted candidate file; path not retained in displayed result. No production operational store is configured. |
-| Limited Underground Trail / Limited Underground Display authorities | Target/artifact/compatibility/recovery facts; Trail embeds a target key/hash and public-contract provenance as source constants; there is no build-time retrieval or runtime network API. |
+| Limited Underground MeshTrail / Limited Underground Display authorities | Target/artifact/compatibility/recovery facts; Trail embeds a target key/hash and public-contract provenance as source constants; there is no build-time retrieval or runtime network API. |
 | Physical device, signer service, production recovery store | Unresolved / no production connection. Fixture interfaces imply no real command path. |
 
 The [Structurizr model](architecture/workspace.dsl) owns context/container views and a focused component view distinguishing production from fixtures. One desktop runtime is one container; C# classes are not containers. See [model/export instructions](architecture/README.md).
@@ -59,7 +59,7 @@ The internal fixture admission/engine/store path supports synthetic validation, 
 
 | Engineering key | Public working name | Current production provider state |
 | --- | --- | --- |
-| `opentrail` | Limited Underground Trail | Lifecycle-v1 offline-inspection provider active for exact `heltec_v4_bench` target rules |
+| `opentrail` | Limited Underground MeshTrail | Lifecycle-v1 offline-inspection provider active for exact `heltec_v4_bench` target rules |
 | `opengauge` | Limited Underground Display | Provider and accepted target manifest do not exist |
 
 The display names are presentation only. They are not wire values, schema keys, cryptographic context, or hardware identifiers.
@@ -192,7 +192,7 @@ Product selection can never be reused as write approval. A future writer require
 | Term | Meaning |
 | --- | --- |
 | Limited Underground Firmware Loader — Preview | Current common Windows application and acceptance boundary. |
-| Limited Underground Trail / Limited Underground Display | Exact visible choices; opentrail / opengauge remain engineering identifiers. |
+| Limited Underground MeshTrail / Limited Underground Display | Exact visible choices; opentrail / opengauge remain engineering identifiers. |
 | Inspection | Bounded candidate structure/integrity checks, without admission. |
 | Provider lease | Opaque activation/context identity plus generation; lifecycle invalidation applies. |
 | Admission | Separate trust/policy decision; not enabled in production. |

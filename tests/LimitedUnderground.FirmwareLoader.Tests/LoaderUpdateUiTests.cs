@@ -1,6 +1,7 @@
 using LimitedUnderground.FirmwareLoader;
 using System.IO;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -209,6 +210,8 @@ internal static class LoaderUpdateUiTests
         // Exercise the actual product choice routed handler, then render the actual window tree.
         var choices = (StackPanel)window.FindName("ProductChoicePanel");
         var trail = FindButtons(choices).Single(b => Equals(b.Tag, "opentrail"));
+        Require(AutomationProperties.GetName(trail) == "Work with Limited Underground MeshTrail", "MeshTrail picker accessible name");
+        Require(((StackPanel)trail.Content).Children.OfType<TextBlock>().First().Text == LoaderProductCatalog.Trail.DisplayName, "MeshTrail picker label");
         trail.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Drain();
         var panel = (LoaderUpdatePanel)window.FindName("UpdatePanel");
         Require(panel.IsVisible == false || panel.Workflow.Choices.Count == 0, "main production no choices");
