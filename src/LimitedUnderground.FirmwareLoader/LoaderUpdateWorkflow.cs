@@ -64,7 +64,7 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
         IsFixture ? "SIMULATED REVIEW — no physical device operation" : "PREVIEW — inspection only";
     public string Heading => heading;
     public string Detail => detail;
-    public string Target => selected is null ? "Target: no device selected" : "Target: Limited Underground Trail · HTIT-WB32LAF V4.2";
+    public string Target => selected is null ? "Target: no device selected" : $"Target: {LoaderProductCatalog.Trail.DisplayName} · HTIT-WB32LAF V4.2";
     public string Selection => selected is null ? "Device: none selected" : selected.DisplayName;
     public string Firmware => engine is null ? "Firmware: no admitted file" :
         $"Firmware: generation {engine.ReleaseManifest.Generation} · compatibility {engine.ReleaseManifest.Compatibility} · {engine.ReleaseManifest.ImageLength} bytes";
@@ -81,7 +81,7 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     public IReadOnlyList<LoaderStep> Steps => BuildSteps();
     public double ProgressValue => Steps.Count(s => s.Status == LoaderStepStatus.Done) / (double)StepLabels.Length;
     public string Summary => engine is null ? "No firmware release is ready to install yet." :
-        $"{(recovery ? "Put back" : "Install")} Limited Underground Trail, release generation {engine.ReleaseManifest.Generation}, on the selected Heltec V4 board.";
+        $"{(recovery ? "Put back" : "Install")} {LoaderProductCatalog.Trail.DisplayName}, release generation {engine.ReleaseManifest.Generation}, on the selected Heltec V4 board.";
     public string NextStep => NextStepText();
     public bool CanSaveSupportFile => engine is not null || uncertain;
     public bool IsBusy => running;

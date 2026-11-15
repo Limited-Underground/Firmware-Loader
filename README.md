@@ -8,7 +8,7 @@ Public source: <https://github.com/Limited-Underground/Firmware-Loader>. The .NE
 
 ## What the application does today
 
-One .NET 10 WPF window presents exactly **Limited Underground Trail** and **Limited Underground Display**. Choosing a product opens a revision-bound provider session and clears prior authority; it does not inspect hardware or authorize a write. Only Limited Underground Trail has a production offline-inspection provider. Limited Underground Display remains providerless and its inspection action is unavailable.
+One .NET 10 WPF window presents exactly **Limited Underground MeshTrail** and **Limited Underground Display**. Choosing a product opens a revision-bound provider session and clears prior authority; it does not inspect hardware or authorize a write. Only Limited Underground MeshTrail has a production offline-inspection provider. Limited Underground Display remains providerless and its inspection action is unavailable.
 
 For offline inspection, explicitly choose a product and use its local candidate picker. The application opens one selected file read-only, avoids recent-file registration and retains/displays no filename or private path. It accepts a bounded archive containing exactly manifest.json, image.bin and manifest.sig, checks canonical metadata, ZIP CRC-32, image length/SHA-256 and signature presence, and reports fixed sanitized outcomes. A product/session change, a new attempted inspection or close invalidates/clears the corresponding result; cancelling the native picker does not attempt a new candidate. See [interface details](docs/INTERFACES.md) and [runtime behavior](docs/ARCHITECTURE.md).
 
@@ -16,7 +16,7 @@ A present signature or matching digest is not release authentication. Production
 
 ## V1 and remaining work
 
-The accepted base-V1 installation/recovery scope is Limited Underground Trail, not the optional Limited Underground Display provider. It is incomplete. [Current V1 acceptance](docs/FOUNDATION.md#existing-v1-acceptance-still-required) maps the existing signer/release, exact-device, preservation/storage, physical recovery and package/operator gates to their owning records. Only the [named host exception](CONTRIBUTING.md#working-rules) may proceed; do not infer broader authority from historical backlog labels.
+The accepted base-V1 installation/recovery scope is Limited Underground MeshTrail, not the optional Limited Underground Display provider. It is incomplete. [Current V1 acceptance](docs/FOUNDATION.md#existing-v1-acceptance-still-required) maps the existing signer/release, exact-device, preservation/storage, physical recovery and package/operator gates to their owning records. Only the [named host exception](CONTRIBUTING.md#working-rules) may proceed; do not infer broader authority from historical backlog labels.
 
 Each product owns its target manifests, artifacts, compatibility, signer and recovery decisions. Loader owns the common application/session and enforcement boundary. Technical keys `opentrail`, `opengauge` and existing source symbols retain their identities; public names do not become protocol keys.
 
