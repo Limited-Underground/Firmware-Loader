@@ -1,6 +1,5 @@
 using Microsoft.Win32;
 using System.IO;
-using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -165,31 +164,34 @@ public partial class MainWindow : Window
         ClearInspection();
         if (!MachineRecoveryStorePolicy.IsElevatedAdministrator())
         {
-            ShowInstallMessage("Run the Loader as administrator", "Installing the qualification release needs administrator rights on this PC. Close the Loader, right-click it and choose Run as administrator.");
+            ShowInstallMessage("Run the Loader as administrator", "The current qualification release still needs administrator rights to protect recovery records. Close the Loader, right-click it and choose Run as administrator.");
+            return;
+        }
+        var runtime = PackagedFlashRuntime.OpenInstalled();
+        string helper = Path.Combine(AppContext.BaseDirectory, "flash-helper", "lu_flash_helper.py");
+        if (runtime is null || !ProcessFlashHelperRunner.FileMatches(helper, BenchFlash.HelperSha256))
+        {
+            ShowInstallMessage("Flash tool unavailable", "The Firmware Loader package is incomplete or damaged. Ask for a verified copy of the package.");
+            return;
+        }
+        try { _ = MachineRecoveryStorePolicy.Open(); }
+        catch (Exception)
+        {
+            ShowInstallMessage("Recovery storage unavailable", "Run the Firmware Loader setup. If you already did, ask an administrator to check the recovery storage.");
             return;
         }
         var dialog = new OpenFolderDialog { Title = "Choose the signed release folder", Multiselect = false };
         if (dialog.ShowDialog(this) != true) return;
 
         var pin = new QualificationBoardPin(QualificationBoardPin.RootPath);
-        string python = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".espressif", "python_env", "idf6.0_py3.14_env", "Scripts", "python.exe");
-        string helper = Path.Combine(AppContext.BaseDirectory, "flash-helper", "lu_flash_helper.py");
-        string? pythonSha = pin.PythonSha256();
-        try { pythonSha ??= File.Exists(python) ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(python))) : null; }
-        catch (Exception) { pythonSha = null; }
-        if (pythonSha is null)
-        {
-            ShowInstallMessage("Flash tool not found", "The ESP-IDF Python environment was not found on this PC. Nothing was written. This PC is not set up for installing yet; ask for the tester package.");
-            return;
-        }
-        var board = BenchFlash.CreateBoard(new ProcessFlashHelperRunner(new FlashHelperInstall(python, pythonSha, helper, BenchFlash.HelperSha256)));
+        var install = runtime.CreateHelperInstall(helper);
+        var board = BenchFlash.CreateBoard(new ProcessFlashHelperRunner(install));
         InstallReleaseButton.IsEnabled = false;
         ShowInstallMessage("Step 1 of 4: checking the release and the board", "Reading the connected board without changing it. This takes about a minute. Keep the board plugged in.");
         try
         {
             var prepared = await QualificationInstaller.PrepareAsync(session, dialog.FolderName, board, pin,
-                MachineRecoveryStorePolicy.Open, BenchFlash.HelperSha256, pythonSha, ReleaseTrustAnchor.PublicKeySpki(),
+                MachineRecoveryStorePolicy.Open, BenchFlash.HelperSha256, install.PythonSha256, ReleaseTrustAnchor.PublicKeySpki(),
                 () => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 () => MessageBox.Show(this, "No board A is set on this PC yet. Set the connected board as board A? Only board A can install the qualification release, and this cannot be changed from the Loader later.",
                     "Set board A", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes,
