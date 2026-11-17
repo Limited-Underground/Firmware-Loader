@@ -18,11 +18,15 @@ internal interface IFlashHelperRunner
 }
 
 // Exact files the helper runs from, each pinned by SHA-256 (uppercase hex). Nothing runs if any differs.
-internal sealed record FlashHelperInstall(string PythonPath, string PythonSha256, string HelperPath, string HelperSha256);
+internal sealed record FlashHelperInstall(string PythonPath, string PythonSha256, string HelperPath, string HelperSha256)
+{
+    internal PackagedFlashRuntime? Runtime { get; init; }
+}
 
 internal sealed class ProcessFlashHelperRunner : IFlashHelperRunner
 {
     internal static readonly TimeSpan MaximumLimit = TimeSpan.FromMinutes(10);
+    internal const string PackagedWriterModule = "packages/esptool/__init__.py";
     private readonly FlashHelperInstall install;
 
     internal ProcessFlashHelperRunner(FlashHelperInstall install) => this.install = install;
@@ -36,7 +40,9 @@ internal sealed class ProcessFlashHelperRunner : IFlashHelperRunner
     public async Task<FlashHelperResult> RunAsync(IReadOnlyList<string> arguments, TimeSpan limit, CancellationToken cancellation)
     {
         if (limit <= TimeSpan.Zero || limit > MaximumLimit) throw new ArgumentOutOfRangeException(nameof(limit));
-        if (!FileMatches(install.PythonPath, install.PythonSha256) || !FileMatches(install.HelperPath, install.HelperSha256))
+        cancellation.ThrowIfCancellationRequested();
+        if (install.Runtime?.Matches() == false || !FileMatches(install.PythonPath, install.PythonSha256) ||
+            !FileMatches(install.HelperPath, install.HelperSha256))
             throw new InvalidOperationException("flash helper files do not match their pinned SHA-256");
         var info = new ProcessStartInfo(install.PythonPath)
         {
@@ -44,8 +50,17 @@ internal sealed class ProcessFlashHelperRunner : IFlashHelperRunner
             RedirectStandardOutput = true, RedirectStandardError = true,
         };
         info.ArgumentList.Add("-I");
+        if (install.Runtime is not null)
+        {
+            info.ArgumentList.Add("-B");
+            info.WorkingDirectory = Path.GetDirectoryName(install.PythonPath)!;
+            string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            info.Environment["PATH"] = string.Join(Path.PathSeparator, info.WorkingDirectory,
+                Environment.SystemDirectory, windows);
+        }
         info.ArgumentList.Add(install.HelperPath);
         foreach (var argument in arguments) info.ArgumentList.Add(argument);
+        cancellation.ThrowIfCancellationRequested();
         using var process = new Process { StartInfo = info };
         if (!process.Start()) throw new InvalidOperationException("flash helper did not start");
         var stdout = process.StandardOutput.ReadToEndAsync(CancellationToken.None);

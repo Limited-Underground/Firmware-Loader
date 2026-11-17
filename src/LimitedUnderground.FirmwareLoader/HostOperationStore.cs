@@ -43,7 +43,18 @@ internal sealed class HostOperationStore : IHostOperationLease, IHostUncertainty
         lock (gate) Refresh();
     }
 
-    internal static HostOperationStore OpenMachine() => new(MachineRecoveryStorePolicy.RootPath, true);
+    internal static HostOperationStore OpenMachine()
+    {
+        using var guard = MachineRecoveryStorePolicy.Acquire();
+        var store = new HostOperationStore(MachineRecoveryStorePolicy.RootPath, true);
+        if (store.poisoned) throw new InvalidOperationException("machine-store-unavailable");
+        string path = Path.Combine(MachineRecoveryStorePolicy.RootPath, LockName);
+        CheckRegular(path);
+        using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        CheckHandle(file.SafeFileHandle, path);
+        MachineRecoveryStorePolicy.CheckFile(file.SafeFileHandle);
+        return store;
+    }
 
     internal static HostOperationStore EnrollMachine(object proof)
     {

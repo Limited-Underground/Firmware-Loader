@@ -4,7 +4,7 @@ Scope: source baseline d74832b1d2579762fc1aea0634ce409a9e4c21ec and this documen
 
 ## Repository license and names
 
-The repository [LICENSE](../LICENSE) is Apache License 2.0 and is unchanged. [BRANDING.md](../BRANDING.md) retains the separate trademark/endorsement restrictions and working-name clearance limit. Public names are Limited Underground Firmware Loader — Preview, Limited Underground Trail and Limited Underground Display. Technical keys/source symbols and historical records keep their exact identities.
+The repository [LICENSE](../LICENSE) is Apache License 2.0 and is unchanged. [BRANDING.md](../BRANDING.md) retains the separate trademark/endorsement restrictions and working-name clearance limit. Public names are Limited Underground Firmware Loader — Preview, Limited Underground MeshTrail and Limited Underground Display. Technical keys/source symbols and historical records keep their exact identities.
 
 No patent, trademark registration, contributor assignment, third-party relicensing or attorney clearance is established by the source build or this documentation review. Do not infer that an open-source code license grants product-name rights. The existing LUF-0011a release process must use the actual package contents, applicable notices and recorded naming decision; this page selects no new legal outcome.
 

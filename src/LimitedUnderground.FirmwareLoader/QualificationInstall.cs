@@ -245,7 +245,7 @@ internal static class QualificationInstaller
         });
 
         if (!controller.TryCreateOfflineBundleInspectionContext(out var context) || context is null)
-            return No("Product not selected", "Choose Limited Underground Trail first.");
+            return No("Product not selected", $"Choose {LoaderProductCatalog.Trail.DisplayName} first.");
         FirmwareBundleCandidateResult inspection;
         using (var bundle = new MemoryStream(QualificationInstall.BundleFor(manifest, files.Padded, files.Signature)))
             inspection = FirmwareBundleCandidateInspector.Inspect(bundle, context);

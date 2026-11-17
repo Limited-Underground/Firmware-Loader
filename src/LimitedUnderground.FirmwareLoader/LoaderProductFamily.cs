@@ -25,9 +25,9 @@ public static class LoaderProductCatalog
 
     public static LoaderProductFamily Trail { get; } = new(
         EngineeringKey: "opentrail",
-        DisplayName: "Limited Underground Trail",
-        Description: "Trail communication devices and companion-system firmware.",
-        ProviderStatus: "Trail's public target rules are available for offline inspection. Signer trust and firmware installation remain unavailable.");
+        DisplayName: "Limited Underground MeshTrail",
+        Description: "MeshTrail communication devices and companion-system firmware.",
+        ProviderStatus: "MeshTrail's public target rules are available for offline inspection. Signer trust and firmware installation remain unavailable.");
 
     public static LoaderProductFamily Display { get; } = new(
         EngineeringKey: "opengauge",
