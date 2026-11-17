@@ -9,6 +9,10 @@ the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acc
 
 ## 2026-11-17
 
+### I-071 Keep Loader validation evidence with the build outputs
+
+The full host gate and packaging fixtures now keep dated runs under the shared Loader evidence root. The host gate puts child-process scratch inside its run and restores the caller’s temporary paths on exit. Hosted CI supplies its private runner directory and keeps the existing sanitized result. The documentation fixtures still use in-memory inputs.
+
 ### L9 Pin the packaged flash runtime (D-117, D-119)
 
 Pinned the Windows x64 CPython 3.14.10 archive, 16 upstream dependency wheels and the esptool 5.3.1 wheel built locally from the approved source. Verified all 18 approved downloads against their recorded SHA-256 values. The packager checked all 18 runtime inputs and staged 1,095 files. The staged manifest matched the earlier PR #74 run byte for byte, and the packaged helper passed its offline import check. The missing-pin fixture now supplies its own draft manifest. Tester signing, clean-Windows validation and board validation remain open.

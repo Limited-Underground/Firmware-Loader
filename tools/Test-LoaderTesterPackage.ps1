@@ -1,13 +1,22 @@
 #requires -Version 7.5
-[CmdletBinding()]
-param([Parameter(Mandatory)][string] $OutputDirectory)
+[CmdletBinding(DefaultParameterSetName = 'EvidenceRoot', PositionalBinding = $false)]
+param(
+    [Parameter(ParameterSetName = 'EvidenceRoot')][ValidateNotNullOrEmpty()][string] $EvidenceRoot,
+    [Parameter(Mandatory, Position = 0, ParameterSetName = 'OutputDirectory')][string] $OutputDirectory
+)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $utf8 = [Text.UTF8Encoding]::new($false)
-$root = [IO.Path]::GetFullPath($OutputDirectory)
-if (Test-Path -LiteralPath $root) { throw 'Choose a new tester package fixture directory.' }
-[IO.Directory]::CreateDirectory($root) | Out-Null
+. (Join-Path $PSScriptRoot 'LoaderValidationEvidence.ps1')
+if ($PSCmdlet.ParameterSetName -ceq 'OutputDirectory') {
+    $root = [IO.Path]::GetFullPath($OutputDirectory)
+    if (Test-Path -LiteralPath $root) { throw 'Choose a new fixture output directory.' }
+    [IO.Directory]::CreateDirectory($root) | Out-Null
+    Write-Host "Loader validation run: $root"
+} else {
+    $root = New-LoaderValidationRun $EvidenceRoot 'LimitedUnderground.Loader.TesterPackage'
+}
 $builder = Join-Path $PSScriptRoot 'New-LoaderTesterPackage.ps1'
 $fixtureRoot = Join-Path $root 'synthetic-input'
 $paths = [ordered]@{}

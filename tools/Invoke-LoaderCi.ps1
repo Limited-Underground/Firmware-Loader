@@ -13,7 +13,7 @@ function Get-LoaderCiReceiptResult([string]$RunRoot) {
         $final = Get-Content -LiteralPath (Join-Path $RunRoot 'final.json') -Raw | ConvertFrom-Json
         $ownership = Get-Content -LiteralPath (Join-Path $RunRoot 'ownership.json') -Raw | ConvertFrom-Json
         $id = Split-Path -Leaf $RunRoot
-        if ($id -cnotmatch '^LimitedUnderground\.Loader\.Validation\.[0-9a-f]{32}$' -or
+        if ($id -cnotmatch '^LimitedUnderground\.Loader\.Validation\.[0-9]{8}T[0-9]{9}Z\.[0-9a-f]{32}$' -or
             $started.run_id -cne $id -or $final.run_id -cne $id -or $ownership.run_id -cne $id -or
             $started.schema -ne 1 -or $final.schema -ne 1 -or
             $started.suite -cne 'full' -or $final.suite -cne 'full' -or
@@ -55,12 +55,10 @@ $summary = [ordered]@{ schema=1; layer='host-only'; status='incomplete'; reason=
     source_commit=$null; result=$null; raw_diagnostics_published=$false }
 if ($env:GITHUB_SHA -cmatch '^[0-9a-f]{40}$') { $summary.source_commit=$env:GITHUB_SHA }
 $summary | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $summaryPath -Encoding utf8
-$oldTemp=$env:TEMP; $oldTmp=$env:TMP
 try {
-    $env:TEMP=$privateRoot; $env:TMP=$privateRoot
     $wrapperPassed=$false
     try {
-        & (Join-Path $PSScriptRoot 'Test-Loader.ps1') *> (Join-Path $privateRoot 'wrapper.log')
+        & (Join-Path $PSScriptRoot 'Test-Loader.ps1') -EvidenceRoot $privateRoot *> (Join-Path $privateRoot 'wrapper.log')
         $wrapperPassed=$true
     } catch { $summary.reason='wrapper-failed' }
     $runs=@(Get-ChildItem -LiteralPath $privateRoot -Directory -Filter 'LimitedUnderground.Loader.Validation.*')
@@ -72,7 +70,6 @@ try {
     } else { $summary.status='failed'; $summary.reason='run-allocation-incomplete' }
 } catch { $summary.status='failed'; $summary.reason='ci-adapter-failed' }
 finally {
-    $env:TEMP=$oldTemp; $env:TMP=$oldTmp
     $summary | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $summaryPath -Encoding utf8
 }
 Write-Host ('Loader host gate: '+$summary.status+' ('+$summary.reason+').')
