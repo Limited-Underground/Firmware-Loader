@@ -7,6 +7,12 @@ does not imply that acceptance occurred on its original report date. Current
 engineering state and sequencing remain in [project status](PROJECT_STATUS.md) and
 the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acceptance.
 
+## 2026-11-17
+
+### L9 Pin the packaged flash runtime (D-117, D-119)
+
+Pinned the Windows x64 CPython 3.14.10 archive, 16 upstream dependency wheels and the esptool 5.3.1 wheel built locally from the approved source. Verified all 18 approved downloads against their recorded SHA-256 values. The packager checked all 18 runtime inputs and staged 1,095 files. The staged manifest matched the earlier PR #74 run byte for byte, and the packaged helper passed its offline import check. The missing-pin fixture now supplies its own draft manifest. Tester signing, clean-Windows validation and board validation remain open.
+
 ## 2026-11-13
 
 ### I-040 Replace the November 2 freeze wording with the current rules
