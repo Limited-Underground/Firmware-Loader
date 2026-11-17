@@ -89,7 +89,18 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     public IReadOnlyList<LoaderStep> Steps => BuildSteps();
     public double ProgressValue => Steps.Count(s => s.Status == LoaderStepStatus.Done) / (double)StepLabels.Length;
     public string Summary => engine is null ? "No firmware release is ready to install yet." :
-        $"{(recovery ? "Put back" : "Install")} {LoaderProductCatalog.Trail.DisplayName}, release generation {engine.ReleaseManifest.Generation}, on the selected Heltec V4 board.";
+        engine.State switch
+        {
+            HostUpdateState.Verified =>
+                $"Installed {LoaderProductCatalog.Trail.DisplayName}, release generation {engine.ReleaseManifest.Generation}, on {(IsProduction ? "board A" : "the selected board")}." +
+                " Firmware and startup checks passed.",
+            HostUpdateState.Recovered =>
+                $"Restored {LoaderProductCatalog.Trail.DisplayName}, release generation {engine.ReleaseManifest.Generation}." +
+                " Firmware and startup checks passed.",
+            HostUpdateState.OutcomeUnknown or HostUpdateState.RecoveryReview =>
+                $"The firmware now on the board is unconfirmed. This attempt used {LoaderProductCatalog.Trail.DisplayName}, release generation {engine.ReleaseManifest.Generation}.",
+            _ => $"{(recovery ? "Put back" : "Install")} {LoaderProductCatalog.Trail.DisplayName}, release generation {engine.ReleaseManifest.Generation}, on the selected Heltec V4 board.",
+        };
     public string NextStep => NextStepText();
     public bool CanSaveSupportFile => engine is not null || uncertain;
     public bool IsBusy => running;

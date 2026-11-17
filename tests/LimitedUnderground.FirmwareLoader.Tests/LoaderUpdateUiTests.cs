@@ -20,6 +20,7 @@ internal static class LoaderUpdateUiTests
         ("UI cancellation retains uncertainty and ignores late completion", () => Sta(Cancel)),
         ("UI actual engine renders write readback boot and verified states", () => Sta(Progress)),
         ("UI failed independent readback never shows success", () => Sta(ReadFailure)),
+        ("UI result identifies installed firmware only after verification", () => Sta(InstalledFirmware)),
         ("UI recovery requires separately admitted original and confirmation", () => Sta(Recovery)),
         ("UI private exception and identifier strings never enter visible projection", () => Sta(Privacy)),
         ("UI actual MainWindow hosts blocked panel and renders at minimum size", () => Sta(MainWindowIntegration)),
@@ -170,6 +171,33 @@ internal static class LoaderUpdateUiTests
         boot.SetResult(new(f.Manifest.ImageDigest, true, true)); Wait(run); Require(m.Heading == "Update verified", "full verification");
         Require(StepCodes(m) == "DDDD" && m.ProgressValue == 1 && m.NextStep.StartsWith("Done", StringComparison.Ordinal), "all steps done only when verified"); Render(p, "08-verified");
     }
+    private static void InstalledFirmware()
+    {
+        using var fixture = new HostUpdateEngineTests.Fixture(select: false, generation: 11);
+        var model = new LoaderUpdateWorkflow([fixture.Selection], (_, _) => fixture.NewEngine(), production: true);
+        var panel = Panel(model);
+        Select(panel);
+        Require(!model.Summary.StartsWith("Installed", StringComparison.Ordinal), "preparation is not installed firmware");
+        Confirm(panel);
+        Wait(Start(panel));
+        Require(model.Heading == "Update verified" &&
+            ((TextBlock)panel.FindName("SummaryText")).Text ==
+                "Installed Limited Underground MeshTrail, release generation 11, on board A. Firmware and startup checks passed.",
+            "actual verified summary names the installed release");
+        Require(model.ImageDigest == "Image SHA-256: " + fixture.Manifest.ImageDigest, "exact firmware identity remains available");
+        Render(panel, "15-qualification-verified");
+
+        using var failed = new HostUpdateEngineTests.Fixture(select: false, generation: 12);
+        var uncertain = Model(failed);
+        var failedPanel = Panel(uncertain);
+        Select(failedPanel);
+        failed.Adapter.Boot = () => Task.FromResult(new HostBootResult(failed.Manifest.ImageDigest, false, true));
+        Confirm(failedPanel);
+        Wait(Start(failedPanel));
+        Require(uncertain.Summary.StartsWith("The firmware now on the board is unconfirmed.", StringComparison.Ordinal) &&
+            !uncertain.Summary.StartsWith("Installed", StringComparison.Ordinal) && !uncertain.CanStart,
+            "failed startup cannot publish an installed result");
+    }
     private static void ReadFailure()
     {
         using var f = new HostUpdateEngineTests.Fixture(select: false); var m = Model(f); var p = Panel(m); Select(p); Confirm(p);
@@ -185,7 +213,7 @@ internal static class LoaderUpdateUiTests
         ((Button)p.FindName("RecoveryButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Require(m.CanConfirm && !m.CanStart && m.ActionLabel == "Restore reviewed original", "separate recovery confirmation");
         Render(p, "09-recovery-ready"); Confirm(p); Wait(Start(p));
         Require(m.Heading == "Original restored" && m.Detail.Contains("does not make", StringComparison.Ordinal), "recovery outcome distinct");
-        Require(StepCodes(m) == "DDDD" && m.Summary.StartsWith("Put back", StringComparison.Ordinal) && m.NextStep.Contains("support file", StringComparison.Ordinal), "recovery steps and next step"); Render(p, "10-recovered");
+        Require(StepCodes(m) == "DDDD" && m.Summary.StartsWith("Restored", StringComparison.Ordinal) && m.NextStep.Contains("support file", StringComparison.Ordinal), "recovery steps and next step"); Render(p, "10-recovered");
     }
     private static void Privacy()
     {
