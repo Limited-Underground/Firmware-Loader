@@ -83,7 +83,7 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     public bool CanConfirm => engine?.State == HostUpdateState.Ready && !running;
     public bool CanStart => CanConfirm && confirmed && (!uncertain || recovery);
     public bool CanCancel => running || engine?.State == HostUpdateState.Ready;
-    public bool CanReviewRecovery => uncertain && !running && selected is not null;
+    public bool CanReviewRecovery => !IsProduction && uncertain && !running && selected is not null;
     // ---- L9 tester flow: step list, plain summary, next step, support file ----
     internal static readonly string[] StepLabels = { "Check the board", "Write the firmware", "Verify the written bytes", "Check that it starts" };
     public IReadOnlyList<LoaderStep> Steps => BuildSteps();
@@ -276,9 +276,13 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
                 "Keep the board plugged in until all four steps are done.",
             HostUpdateState.Verified => "Done. The board is running the new firmware; you can unplug it.",
             HostUpdateState.Recovered => "The previous firmware is back. Save a support file and report the failed install.",
+            HostUpdateState.NoWriteStopped when uncertain || engine.UncertaintyMarkerRetained =>
+                "Stop here. Save a support file and contact your test coordinator before another attempt.",
             HostUpdateState.NoWriteStopped when engine.BindingFault is HostBindingFault.DeviceDisconnected or HostBindingFault.DeviceChanged =>
                 "Nothing was written. Plug the board back in, choose it again and start again.",
             HostUpdateState.NoWriteStopped => "Nothing was written. Save a support file if this happens again.",
+            HostUpdateState.OutcomeUnknown or HostUpdateState.RecoveryReview when IsProduction =>
+                "Do not unplug, retry or reset the board. Save a support file and contact your test coordinator. A restore needs a separately approved signed release.",
             HostUpdateState.OutcomeUnknown or HostUpdateState.RecoveryReview =>
                 "Do not unplug, retry or reset the board. Save a support file and send it before doing anything else.",
             _ => "Choose the board to install on.",

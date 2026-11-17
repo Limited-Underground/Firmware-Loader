@@ -22,6 +22,7 @@ internal static class LoaderUpdateUiTests
         ("UI failed independent readback never shows success", () => Sta(ReadFailure)),
         ("UI result identifies installed firmware only after verification", () => Sta(InstalledFirmware)),
         ("UI recovery requires separately admitted original and confirmation", () => Sta(Recovery)),
+        ("UI qualification interruption keeps uncertainty and directs signed recovery review", () => Sta(QualificationRecovery)),
         ("UI private exception and identifier strings never enter visible projection", () => Sta(Privacy)),
         ("UI actual MainWindow hosts blocked panel and renders at minimum size", () => Sta(MainWindowIntegration)),
         ("UI support file has fixed fields only and no identifiers", () => Sta(SupportFile)),
@@ -214,6 +215,31 @@ internal static class LoaderUpdateUiTests
         Render(p, "09-recovery-ready"); Confirm(p); Wait(Start(p));
         Require(m.Heading == "Original restored" && m.Detail.Contains("does not make", StringComparison.Ordinal), "recovery outcome distinct");
         Require(StepCodes(m) == "DDDD" && m.Summary.StartsWith("Restored", StringComparison.Ordinal) && m.NextStep.Contains("support file", StringComparison.Ordinal), "recovery steps and next step"); Render(p, "10-recovered");
+    }
+    private static void QualificationRecovery()
+    {
+        using var fixture = new HostUpdateEngineTests.Fixture(select: false);
+        int preparations = 0;
+        var model = new LoaderUpdateWorkflow([fixture.Selection], (_, _) =>
+        {
+            preparations++;
+            return fixture.NewEngine();
+        }, production: true);
+        var panel = Panel(model);
+        Select(panel);
+        fixture.Adapter.Write = () => Task.FromException(new IOException("private connection detail COM99"));
+        Confirm(panel);
+        Wait(Start(panel));
+        Require(model.Heading.StartsWith("Outcome unknown", StringComparison.Ordinal) &&
+            model.NextStep.Contains("separately approved signed release", StringComparison.Ordinal) &&
+            !model.CanStart && model.CanSaveSupportFile && !model.CanReviewRecovery,
+            "qualification interruption has actionable signed recovery guidance");
+        Require(!((Button)panel.FindName("RecoveryButton")).IsEnabled, "unsupported recovery action stays disabled");
+        ((Button)panel.FindName("RecoveryButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Require(preparations == 1 && fixture.Adapter.Writes == 1 && fixture.Journal.HasUnresolvedOperation,
+            "recovery click cannot start a different operation or clear uncertainty");
+        Require(!model.Detail.Contains("COM99", StringComparison.Ordinal), "connection diagnostics stay private");
+        Render(panel, "16-qualification-uncertain");
     }
     private static void Privacy()
     {

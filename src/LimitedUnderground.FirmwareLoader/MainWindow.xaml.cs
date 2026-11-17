@@ -209,7 +209,7 @@ public partial class MainWindow : Window
         }
         catch (Exception)
         {
-            ShowInstallMessage("Preparation stopped", "The board or the flash tool did not respond as expected. Nothing was written. Unplug the board, plug it back in and try again. If it happens again, report it with the time it happened.");
+            ShowInstallMessage("Preparation stopped", "The board or the flash tool did not respond as expected during preparation. No update was started. Contact your test coordinator with this message and the time it happened.");
         }
         finally
         {

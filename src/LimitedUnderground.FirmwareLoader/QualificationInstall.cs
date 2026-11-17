@@ -214,8 +214,10 @@ internal static class QualificationInstaller
             return No("Release not signed for this Loader", "The record names a different signing key.");
 
         var ports = await board.FindBoardsAsync(cancellation).ConfigureAwait(true);
-        if (ports.Count != 1) return No(ports.Count == 0 ? "No board found" : "More than one board connected",
-            "Connect exactly one Heltec V4 board by USB, then try again.");
+        if (ports.Count == 0)
+            return No("No board found", "Nothing was written. Connect the assigned board with a data-capable USB cable and choose the signed release again. If it is still missing, contact your test coordinator.");
+        if (ports.Count != 1)
+            return No("More than one board connected", "Nothing was written. Keep only your assigned board connected, then choose the signed release again.");
         var selection = await board.SelectAsync(ports[0], cancellation).ConfigureAwait(true);
         var mac = board.MacOf(selection);
         if (!pin.IsPinned)
@@ -223,7 +225,7 @@ internal static class QualificationInstaller
             if (mac is null || !confirmPinThisBoard() || !pin.TryPin(mac, pythonSha256))
                 return No("Board A not set", "The qualification release installs only on board A. Board A was not set on this PC.");
         }
-        if (!pin.Matches(mac)) return No("Not board A", "This qualification release installs only on board A, and the connected board is a different one. Nothing was written.");
+        if (!pin.Matches(mac)) return No("Not board A", "Nothing was written. This PC is set for board A, and the connected board is different. Use the assigned board or contact your test coordinator.");
 
         if (!QualificationInstall.TryParseChipIdentity(manifest.Text("requiredBootloader"), out var bootOffset, out var bootLength, out _) ||
             !QualificationInstall.TryParseChipIdentity(manifest.Text("requiredCurrentFirmware"), out var appOffset, out var appLength, out _))
@@ -241,7 +243,9 @@ internal static class QualificationInstaller
             "production-binding" => "The board is not running the firmware this release expects, or the release files do not match the record. Nothing was written.",
             "signature" => "The signature does not match the owner's key. Nothing was written.",
             "persisted-clock-or-policy" => "This PC's clock is earlier than a previous admission. Nothing was written.",
-            _ => "The release did not pass admission (" + refusal + "). Nothing was written.",
+            "signer-policy" => "The release expiry or signing policy does not permit this install. Nothing was written. Ask your test coordinator for the matching approved release.",
+            "manifest-binding" or "address-plan" => "This release does not match the supported board or firmware layout. Nothing was written. Ask your test coordinator for the matching approved release.",
+            _ => "The release could not be verified for this board. Nothing was written. Keep the files together and contact your test coordinator.",
         });
 
         if (!controller.TryCreateOfflineBundleInspectionContext(out var context) || context is null)
