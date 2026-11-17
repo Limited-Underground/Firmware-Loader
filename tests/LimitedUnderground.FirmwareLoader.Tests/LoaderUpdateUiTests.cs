@@ -14,6 +14,7 @@ internal static class LoaderUpdateUiTests
     {
         ("UI production panel has no choices or operational authority", () => Sta(Production)),
         ("UI explicit selection plus separate confirmation required", () => Sta(Selection)),
+        ("UI qualification choice names board A and waits for explicit selection", () => Sta(QualificationSelection)),
         ("UI stale selection consumes old confirmation and cannot start", () => Sta(Reselect)),
         ("UI file product and close invalidation cancel actual engine", () => Sta(Invalidation)),
         ("UI cancellation retains uncertainty and ignores late completion", () => Sta(Cancel)),
@@ -105,6 +106,21 @@ internal static class LoaderUpdateUiTests
         Render(p, "03-preflight-ready"); Confirm(p); Require(m.CanStart, "explicit confirmation enables exact fixture attempt");
         Wait(Start(p)); Require(m.Heading == "Update verified" && f.Adapter.Writes == 1 && !m.CanStart, "one attempt only");
         Wait(Start(p)); Require(f.Adapter.Writes == 1, "old action cannot resubmit");
+    }
+    private static void QualificationSelection()
+    {
+        using var fixture = new HostUpdateEngineTests.Fixture(select: false);
+        var model = new LoaderUpdateWorkflow([fixture.Selection], (_, _) => fixture.NewEngine(), production: true);
+        var panel = Panel(model);
+        Drain();
+        var list = (ComboBox)panel.FindName("DeviceList");
+        Require(list.SelectedIndex == -1 && !model.CanStart && !model.CanConfirm, "qualification waits for explicit selection");
+        Require(model.Choices.Single().DisplayName == "Board A · Heltec V4 · HTIT-WB32LAF V4.2", "only the admitted board A choice is named");
+        Require(((TextBlock)panel.FindName("DeviceInstructionText")).Text == model.DeviceInstruction &&
+            model.DeviceInstruction.Contains("assigned board", StringComparison.Ordinal), "actual instruction explains physical matching");
+        Select(panel);
+        Require(model.CanConfirm && !model.CanStart && fixture.Adapter.Writes == 0, "selection grants no automatic confirmation or write");
+        Render(panel, "14-qualification-selection");
     }
     private static void Reselect()
     {
@@ -216,6 +232,9 @@ internal static class LoaderUpdateUiTests
         var panel = (LoaderUpdatePanel)window.FindName("UpdatePanel");
         Require(panel.IsVisible == false || panel.Workflow.Choices.Count == 0, "main production no choices");
         Require(!panel.Workflow.CanStart && panel.Workflow.Heading == "Installation unavailable", "main invalidated disabled panel");
+        Require(panel.Visibility == Visibility.Collapsed, "inactive install panel is hidden until a release is prepared");
+        Require(((TextBlock)window.FindName("SelectedProductStatus")).Text.Contains("Administrator rights", StringComparison.Ordinal),
+            "qualification access requirement is visible before preparation");
         var content = (FrameworkElement)window.Content; window.Content = null; Render(content, "12-main-window-top", 720, 520);
         var scroll = FindDescendants<ScrollViewer>(content).First(); scroll.ScrollToEnd(); Drain();
         Render(content, "13-main-window-bottom", 720, 520); window.Close();

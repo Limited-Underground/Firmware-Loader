@@ -263,6 +263,6 @@ internal static class QualificationInstaller
             return engine;
         }
         var workflow = new LoaderUpdateWorkflow([selection], Factory, production: true);
-        return new(workflow, "Board A ready", "Review the release and board, confirm once, then start. The Loader writes the app, checks the chip's checksum of every region and waits for the board to start.");
+        return new(workflow, "Board A ready", "Choose Board A in the list below. Check the MeshTrail release generation against your assignment, tick the confirmation box, then start. Keep the board plugged in through all four steps.");
     }
 }

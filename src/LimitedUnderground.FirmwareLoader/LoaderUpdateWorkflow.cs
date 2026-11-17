@@ -5,7 +5,12 @@ namespace LimitedUnderground.FirmwareLoader;
 
 internal sealed class LoaderDeviceChoice
 {
-    internal LoaderDeviceChoice(HostSelection selection, int number) { Selection = selection; DisplayName = $"Heltec V4 board on USB ({number}) · HTIT-WB32LAF V4.2"; }
+    internal LoaderDeviceChoice(HostSelection selection, int number, bool qualification)
+    {
+        Selection = selection;
+        DisplayName = qualification ? "Board A · Heltec V4 · HTIT-WB32LAF V4.2" :
+            $"Heltec V4 board on USB ({number}) · HTIT-WB32LAF V4.2";
+    }
     internal HostSelection Selection { get; }
     public string DisplayName { get; }
 }
@@ -52,7 +57,7 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
         this.production = production;
         // Never project caller-supplied identifiers/paths into the visible device list.
         Choices = choices.Where(s => s.Target == "heltec_v4_bench" && s.Model == "HTIT-WB32LAF V4.2" && s.Generation != 0)
-            .Select((s, i) => new LoaderDeviceChoice(s, i + 1)).ToArray();
+            .Select((s, i) => new LoaderDeviceChoice(s, i + 1, production)).ToArray();
         heading = "Choose the intended device";
         detail = "No device is selected automatically. Choose one device, review the checks, then confirm this exact attempt.";
     }
@@ -62,6 +67,9 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     public bool IsProduction => factory is not null && production;
     public string SessionLabel => IsProduction ? "QUALIFICATION RELEASE — board A only · writes to the connected board" :
         IsFixture ? "SIMULATED REVIEW — no physical device operation" : "PREVIEW — inspection only";
+    public string DeviceInstruction => IsProduction
+        ? "Choose Board A below. Keep only the assigned board connected. Then review the firmware and tick the confirmation box."
+        : "Choose the board";
     public string Heading => heading;
     public string Detail => detail;
     public string Target => selected is null ? "Target: no device selected" : $"Target: {LoaderProductCatalog.Trail.DisplayName} · HTIT-WB32LAF V4.2";
