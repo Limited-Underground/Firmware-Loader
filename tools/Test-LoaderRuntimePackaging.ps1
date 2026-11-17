@@ -1,11 +1,20 @@
 #requires -Version 7.5
-[CmdletBinding()]
-param([Parameter(Mandatory)][string] $OutputDirectory)
+[CmdletBinding(DefaultParameterSetName = 'EvidenceRoot', PositionalBinding = $false)]
+param(
+    [Parameter(ParameterSetName = 'EvidenceRoot')][ValidateNotNullOrEmpty()][string] $EvidenceRoot,
+    [Parameter(Mandatory, Position = 0, ParameterSetName = 'OutputDirectory')][string] $OutputDirectory
+)
 
 $ErrorActionPreference = 'Stop'
-$root = [IO.Path]::GetFullPath($OutputDirectory)
-if (Test-Path -LiteralPath $root) { throw 'Choose an unused output folder for these fixtures.' }
-New-Item -ItemType Directory -Path $root | Out-Null
+. (Join-Path $PSScriptRoot 'LoaderValidationEvidence.ps1')
+if ($PSCmdlet.ParameterSetName -ceq 'OutputDirectory') {
+    $root = [IO.Path]::GetFullPath($OutputDirectory)
+    if (Test-Path -LiteralPath $root) { throw 'Choose a new fixture output directory.' }
+    [IO.Directory]::CreateDirectory($root) | Out-Null
+    Write-Host "Loader validation run: $root"
+} else {
+    $root = New-LoaderValidationRun $EvidenceRoot 'LimitedUnderground.Loader.RuntimePackaging'
+}
 $source = Join-Path $root 'inputs'
 New-Item -ItemType Directory -Path $source | Out-Null
 $pack = Join-Path $PSScriptRoot 'Package-LoaderRuntime.ps1'

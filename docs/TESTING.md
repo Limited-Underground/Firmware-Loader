@@ -36,10 +36,11 @@ Documentation-only wording changes use the existing documentation checks and reu
 
 ## Practical full invocation
 
-Use an isolated PowerShell 7.5+ process from the intended source checkout. Choose an approved task-owned temporary parent outside source, create it first and set both TEMP/TMP to it. Do not use another task's output or an existing validation-run directory. In that isolated caller:
+Use an isolated PowerShell 7.5+ process from the intended source checkout. The wrapper uses `D:\LimitedUnderground\Build\ldr-validation` when the local Build folder exists, creating its evidence root on the first run. If the local Build folder is unavailable, it uses `RUNNER_TEMP` or, when that is unset, `TEMP`. Hosted CI supplies its private runner directory explicitly. The wrapper reports the selected root and creates a new directory named with a UTC timestamp and a unique suffix.
+
+Pass `-EvidenceRoot` or set `LUF_EVIDENCE_ROOT` to choose an absolute path outside the source tree. The parameter takes precedence. The parent of a new evidence root must already exist. The two packaging fixture scripts also accept this root selection. Documentation checks and their fixtures run in memory and need no output directory.
 
 ```powershell
-# TEMP/TMP already point at the existing task-owned temporary parent.
 $env:LUF_UI_ONLY = '0'
 $env:LUF_STORE_ONLY = '0'
 .\tools\Test-Loader.ps1
@@ -47,7 +48,10 @@ $env:LUF_STORE_ONLY = '0'
 
 This one command builds both Release projects and executes the freshly built test DLL; no separate dotnet run is needed. It selects the highest installed stable10.0 SDK and creates fresh NuGet packages, CLI home, artifacts and evidence directories. The installed SDK/Desktop packs are declared prerequisites, not cached project input. NuGet sources are cleared; the source has no external PackageReference. A missing prerequisite is a blocker to diagnose, not permission to add a feed or migrate the runtime.
 
-For a retained local run inspect ownership.json, started.json, all three stage JSON/log pairs and final.json. Require app-build/test-build/tests native exit0, final status passed, suite full and environment_restored=true; record the actual output count/renderings and artifact hashes. The script restores the variables it changes, while this isolated caller owns its chosen TEMP/TMP and selector settings. A CI sanitized summary deliberately omits raw paths/logs/counts; it must not be described as local raw evidence.
+For a retained local run inspect ownership.json, started.json, all three stage JSON/log pairs and final.json. Require app-build/test-build/tests native exit0, final status passed, suite full and environment_restored=true; record the actual output count/renderings and artifact hashes. The script gives its child processes a scratch directory inside the run and restores caller TEMP, TMP, TMPDIR and other changed variables. The caller owns its selector settings. A CI sanitized summary deliberately omits raw paths/logs/counts; it must not be described as local raw evidence.
+
+For an evidence-routing regression check, run [Test-LoaderEvidenceRoot.Tests.ps1](../tools/Test-LoaderEvidenceRoot.Tests.ps1). It runs the full gate with an explicit root and watches an isolated caller TEMP/TMP directory for writes.
+
 ## Direct focused runner
 
 The ordinary runner takes exactly two arguments after its DLL: source root and a new screenshot directory outside the source tree. The screenshot parent must already exist; the child must not. Example argument shape:

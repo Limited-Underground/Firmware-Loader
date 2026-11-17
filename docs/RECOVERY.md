@@ -25,7 +25,7 @@ Run from an approved staging parent; choose a nonexistent task-owned destination
     git -C NEW_DIRECTORY fsck --full
     git -C NEW_DIRECTORY status --porcelain
 
-Record resolved source and source-file hashes. Create a separate task-owned temporary parent outside the clone and point TEMP/TMP there. Run the maintained wrapper from the clone in an isolated PowerShell process with LUF_UI_ONLY and LUF_STORE_ONLY not equal to 1. It creates fresh package cache, CLI home and artifacts, retains diagnostics/renderings/receipts, and restores environment variables it changes.
+Record resolved source and source-file hashes. Use the [validation evidence root](TESTING.md#practical-full-invocation) outside the clone. Run the maintained wrapper from the clone in an isolated PowerShell process with LUF_UI_ONLY and LUF_STORE_ONLY not equal to 1. It creates fresh package cache, CLI home and artifacts, retains diagnostics/renderings/receipts, and restores environment variables it changes.
 
 Require final success after both warning-as-error Release builds, full-suite mode, environment restoration and receipt finalization. For a locally retained run, also record the actual full-suite count, renderings and output hashes. The hosted workflow retains a deliberately sanitized result with the limits stated below. A started receipt or one successful stage is not a full pass.
 

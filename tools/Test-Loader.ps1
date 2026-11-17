@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([ValidateNotNullOrEmpty()][string] $EvidenceRoot)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -8,15 +8,8 @@ if ($PSVersionTable.PSVersion -lt [version]'7.5') { throw 'Loader validation req
 if ($env:LUF_UI_ONLY -ceq '1' -or $env:LUF_STORE_ONLY -ceq '1') {
     throw 'Full Loader validation refuses focused selectors. Use the documented direct runner for focused tests.'
 }
-function Assert-PlainDirectory([string]$Path) {
-    if (-not [IO.Path]::IsPathFullyQualified($Path)) { throw 'A fully qualified directory is required.' }
-    $item = [IO.DirectoryInfo]::new([IO.Path]::GetFullPath($Path))
-    while ($null -ne $item) {
-        $item.Refresh()
-        if (-not $item.Exists -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Missing or linked directory refused.' }
-        $item = $item.Parent
-    }
-}
+. (Join-Path $PSScriptRoot 'LoaderValidationEvidence.ps1')
+
 function Write-NewJson([string]$Path, $Value) {
     $stream = [IO.FileStream]::new($Path, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
     try {
@@ -104,26 +97,11 @@ Assert-PlainDirectory $projectRoot
 # Documentation preflight is offline and fail-closed, before any SDK/build work.
 & (Join-Path $PSScriptRoot 'Test-LoaderDocumentation.ps1') -Root $projectRoot
 & (Join-Path $PSScriptRoot 'Test-LoaderDocumentation.Tests.ps1') -Root $projectRoot
-if ([string]::IsNullOrWhiteSpace($env:TEMP)) { throw 'TEMP is required.' }
-$validationParent = [IO.Path]::GetFullPath($env:TEMP)
-Assert-PlainDirectory $env:TEMP
-$dotnetHost = (Get-Command dotnet -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
-$sdkInventory = & $dotnetHost --list-sdks
-if ($LASTEXITCODE -ne 0) { throw 'Unable to enumerate installed .NET SDKs.' }
-$sdk = $sdkInventory | ForEach-Object {
-    if ($_ -match '^(10\.0\.\d+) \[(.+)\]$') { [pscustomobject]@{Version=[version]$Matches[1];Root=$Matches[2]} }
-} | Sort-Object Version -Descending | Select-Object -First 1
-if ($null -eq $sdk) { throw 'Offline Loader validation requires an installed stable .NET 10.0 SDK.' }
-$sdkCli = Join-Path (Join-Path $sdk.Root $sdk.Version.ToString()) 'dotnet.dll'
-if (-not (Test-Path -LiteralPath $sdkCli -PathType Leaf)) { throw 'Selected SDK CLI unavailable.' }
-$runId = 'LimitedUnderground.Loader.Validation.'+[Guid]::NewGuid().ToString('N')
-$validationRoot = Join-Path $validationParent $runId
-if (Test-Path -LiteralPath $validationRoot) { throw 'Existing validation run refused.' }
-[IO.Directory]::CreateDirectory($validationRoot) | Out-Null
-Assert-PlainDirectory $validationRoot
+$validationRoot = New-LoaderValidationRun $EvidenceRoot 'LimitedUnderground.Loader.Validation'
+$runId = Split-Path -Leaf $validationRoot
 Write-NewJson (Join-Path $validationRoot 'ownership.json') @{run_id=$runId; created_utc=[DateTime]::UtcNow.ToString('o')}
 
-$names = @('NUGET_PACKAGES','DOTNET_CLI_HOME','DOTNET_CLI_TELEMETRY_OPTOUT','DOTNET_GENERATE_ASPNET_CERTIFICATE','DOTNET_NOLOGO','DOTNET_SKIP_FIRST_TIME_EXPERIENCE')
+$names = @('TEMP','TMP','TMPDIR','NUGET_PACKAGES','DOTNET_CLI_HOME','DOTNET_CLI_TELEMETRY_OPTOUT','DOTNET_GENERATE_ASPNET_CERTIFICATE','DOTNET_NOLOGO','DOTNET_SKIP_FIRST_TIME_EXPERIENCE')
 $saved = @{}
 $savedPresent = @{}
 foreach ($name in $names) {
@@ -132,8 +110,24 @@ foreach ($name in $names) {
 }
 $failure = $null; $restoreFailures = [Collections.Generic.List[string]]::new()
 try {
+    $scratch = Join-Path $validationRoot 'tmp'
+    [IO.Directory]::CreateDirectory($scratch) | Out-Null
+    Assert-PlainDirectory $scratch
+    $env:TEMP = $scratch; $env:TMP = $scratch; $env:TMPDIR = $scratch
+    $env:NUGET_PACKAGES=Join-Path $validationRoot 'packages'; $env:DOTNET_CLI_HOME=Join-Path $validationRoot 'dotnet-home'
+    $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'; $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
+    $env:DOTNET_NOLOGO='1'; $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1'
+    $dotnetHost = (Get-Command dotnet -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
+    $sdkInventory = & $dotnetHost --list-sdks
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to enumerate installed .NET SDKs.' }
+    $sdk = $sdkInventory | ForEach-Object {
+        if ($_ -match '^(10\.0\.\d+) \[(.+)\]$') { [pscustomobject]@{Version=[version]$Matches[1];Root=$Matches[2]} }
+    } | Sort-Object Version -Descending | Select-Object -First 1
+    if ($null -eq $sdk) { throw 'Offline Loader validation requires an installed stable .NET 10.0 SDK.' }
+    $sdkCli = Join-Path (Join-Path $sdk.Root $sdk.Version.ToString()) 'dotnet.dll'
+    if (-not (Test-Path -LiteralPath $sdkCli -PathType Leaf)) { throw 'Selected SDK CLI unavailable.' }
     $identities = @{}
-    foreach ($relative in @('tools/Test-Loader.ps1','tests/LimitedUnderground.FirmwareLoader.Tests/Program.cs','tests/LimitedUnderground.FirmwareLoader.Tests/LoaderUpdateUiTests.cs','tests/LimitedUnderground.FirmwareLoader.Tests/HostOperationStoreTests.cs')) {
+    foreach ($relative in @('tools/Test-Loader.ps1','tools/LoaderValidationEvidence.ps1','tests/LimitedUnderground.FirmwareLoader.Tests/Program.cs','tests/LimitedUnderground.FirmwareLoader.Tests/LoaderUpdateUiTests.cs','tests/LimitedUnderground.FirmwareLoader.Tests/HostOperationStoreTests.cs')) {
         $identities[$relative] = (Get-FileHash -LiteralPath (Join-Path $projectRoot $relative) -Algorithm SHA256).Hash
     }
     Write-NewJson (Join-Path $validationRoot 'started.json') @{
@@ -142,12 +136,9 @@ try {
         powershell=$PSVersionTable.PSVersion.ToString(); ui_selector=$env:LUF_UI_ONLY; store_selector=$env:LUF_STORE_ONLY;
         retention='retain wrapper-owned outputs; nested fixtures may dispose their own files'
     }
-    $env:NUGET_PACKAGES=Join-Path $validationRoot 'packages'; $env:DOTNET_CLI_HOME=Join-Path $validationRoot 'dotnet-home'
-    $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'; $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
-    $env:DOTNET_NOLOGO='1'; $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1'
-    Invoke-LoggedStage 'app-build' @($sdkCli,'build',(Join-Path $projectRoot 'src/LimitedUnderground.FirmwareLoader/LimitedUnderground.FirmwareLoader.csproj'),'--configuration','Release','--artifacts-path',(Join-Path $validationRoot 'app-artifacts'))
+    Invoke-LoggedStage 'app-build' @($sdkCli,'build',(Join-Path $projectRoot 'src/LimitedUnderground.FirmwareLoader/LimitedUnderground.FirmwareLoader.csproj'),'--configuration','Release','--disable-build-servers','--artifacts-path',(Join-Path $validationRoot 'app-artifacts'))
     $testArtifacts=Join-Path $validationRoot 'test-artifacts'
-    Invoke-LoggedStage 'test-build' @($sdkCli,'build',(Join-Path $projectRoot 'tests/LimitedUnderground.FirmwareLoader.Tests/LimitedUnderground.FirmwareLoader.Tests.csproj'),'--configuration','Release','--artifacts-path',$testArtifacts)
+    Invoke-LoggedStage 'test-build' @($sdkCli,'build',(Join-Path $projectRoot 'tests/LimitedUnderground.FirmwareLoader.Tests/LimitedUnderground.FirmwareLoader.Tests.csproj'),'--configuration','Release','--disable-build-servers','--artifacts-path',$testArtifacts)
     $testAssembly=Join-Path $testArtifacts 'bin/LimitedUnderground.FirmwareLoader.Tests/release/LimitedUnderground.FirmwareLoader.Tests.dll'
     if (-not (Test-Path -LiteralPath $testAssembly -PathType Leaf)) { throw 'Built test assembly was not found.' }
     Invoke-LoggedStage 'tests' @($testAssembly,$projectRoot,(Join-Path $validationRoot 'ui-renderings'))
