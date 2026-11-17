@@ -113,6 +113,10 @@ $result = & $builder @sourceArgs -InputLockSha256 $lockHash -OutputDirectory $ou
 $valid = & $builder -VerifyDirectory $out -ManifestSha256 $result.manifestSha256
 Assert ($valid.mode -ceq 'fixture' -and $valid.files -eq $result.files) 'The fixture did not verify.'
 Assert ((Get-Content -LiteralPath (Join-Path $out 'README.md') -TotalCount 1) -like '*do not install or flash*') 'Fixture warning absent.'
+$guide = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'tester-package/README.md'))
+$packagedGuide = [IO.File]::ReadAllText((Join-Path $out 'README.md'))
+$fixtureWarning = "# Unsigned package fixture — do not install or flash" + [char]10 + [char]10
+Assert ($packagedGuide -ceq ($fixtureWarning + $guide)) 'The package did not carry the current tester guide exactly.'
 foreach ($side in 'install','restore') {
     foreach ($leaf in 'release.sig','recovery-image.bin','SUMMARY.txt') {
         Assert (!(Test-Path -LiteralPath (Join-Path $out "firmware/$side/$leaf"))) 'Unexpected private or signature material in fixture.'
