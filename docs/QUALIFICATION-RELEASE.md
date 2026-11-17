@@ -49,7 +49,7 @@ Owner decision D-065 (2026-11-12) set three things:
 
 [QualificationInstall.cs](../src/LimitedUnderground.FirmwareLoader/QualificationInstall.cs) adds one install path for this release only. Bundle inspection still never marks anything trusted (`LoaderProductionProviders.SignerTrustPolicies` stays empty). Trust comes only from the pinned key (`ReleaseTrustAnchor`, now with the key embedded) through full production admission.
 
-The [packaged flash runtime and setup](PACKAGED-FLASH-RUNTIME.md) replace the earlier ESP-IDF Python lookup. Open **Install signed qualification release** once the verified package and recovery storage are ready:
+The [packaged flash runtime and setup](PACKAGED-FLASH-RUNTIME.md) replace the earlier ESP-IDF Python lookup. Once the verified package and recovery storage are ready, choose **Limited Underground MeshTrail** in the window, then select **Install signed qualification release**. The Loader:
 
 1. Runs only with administrator rights. The operation journal (`MachineRecoveryStorePolicy`) and the board A pin are administrator-only.
 2. Opens a signed release folder: `release.json`, `release.sig`, `raw.bin`, `padded.bin`.

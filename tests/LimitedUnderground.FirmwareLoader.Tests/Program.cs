@@ -105,7 +105,7 @@ void PublicNamesAreExact()
 {
     Require(LoaderProductCatalog.ParentName == "Limited Underground", "parent name");
     Require(LoaderProductCatalog.WindowTitle == "Limited Underground Firmware Loader — Preview", "window title");
-    Require(LoaderProductCatalog.Trail.DisplayName == "Limited Underground Trail", "Trail name");
+    Require(LoaderProductCatalog.Trail.DisplayName == "Limited Underground MeshTrail", "MeshTrail name");
     Require(LoaderProductCatalog.Display.DisplayName == "Limited Underground Display", "Display name");
 }
 
@@ -190,7 +190,7 @@ void UiExposesChooserAndDisabledOperation()
         "src",
         "LimitedUnderground.FirmwareLoader",
         "MainWindow.xaml"));
-    Require(xaml.Contains("Limited Underground Trail", StringComparison.Ordinal), "Trail choice copy");
+    Require(xaml.Contains("LoaderProductCatalog.Trail", StringComparison.Ordinal), "MeshTrail choice uses catalog");
     Require(xaml.Contains("Limited Underground Display", StringComparison.Ordinal), "Display choice copy");
     Require(xaml.Contains("x:Name=\"ContinueButton\"", StringComparison.Ordinal), "continue button");
     Require(xaml.Contains("IsEnabled=\"False\"", StringComparison.Ordinal), "disabled continue");

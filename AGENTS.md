@@ -6,7 +6,7 @@
 
 - The approved standalone Firmware-Loader checkout is the canonical implementation and source authority; establish its identity from local routing records before work.
 - The Trail repository tools/windows-loader directory is a frozen historical predecessor. It is not a synchronized mirror, must not be edited, and must not be used to infer current Firmware-Loader behavior.
-- Limited Underground Trail and Limited Underground Display own their target manifests, compatibility evidence, firmware artifacts, signer decisions, and recovery decisions. Preserve technical keys, source symbols and historical evidence names.
+- Limited Underground MeshTrail and Limited Underground Display own their target manifests, compatibility evidence, firmware artifacts, signer decisions, and recovery decisions. Preserve technical keys, source symbols and historical evidence names.
 - Do not copy project-private records, identifiers, keys, or artifacts into this repository.
 - Any later loader implementation work must be explicitly scoped to this canonical repository.
 
@@ -24,9 +24,9 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md). The owner accepted bounded source rec
 ## Product boundary
 
 - The public working name is Limited Underground Firmware Loader — Preview, pending attorney clearance.
-- The first interaction presents exactly Limited Underground Trail and Limited Underground Display as provider choices.
+- The first interaction presents exactly Limited Underground MeshTrail and Limited Underground Display as provider choices.
 - Engineering keys remain opentrail and opengauge; public names never become protocol or compatibility identifiers.
-- Selecting Limited Underground Trail or Limited Underground Display selects only a provider namespace. It never grants bundle, signer, device, write, erase, reset, reboot, rollback, recovery, or eFuse authority.
+- Selecting Limited Underground MeshTrail or Limited Underground Display selects only a provider namespace. It never grants bundle, signer, device, write, erase, reset, reboot, rollback, recovery, or eFuse authority.
 - The default session inspects firmware bundles only. The one install path is the signed qualification release for board A (run as administrator; it writes only after the board check, the signature check and one confirmation, then verifies by checksum and startup check). Installing on other boards or for testers waits for its own accepted gates. The application must not expose, advertise or imply installation authority beyond that.
 
 ## Fail-closed safety and privacy
