@@ -8,8 +8,8 @@
       "filename": "python-3.14.10-embed-amd64.zip",
       "url": "https://www.python.org/ftp/python/3.14.10/python-3.14.10-embed-amd64.zip",
       "kind": "python",
-      "size": null,
-      "sha256": null
+      "size": 12619664,
+      "sha256": "90905E64A840557D8C1BC4F5B74DB3D7EE85E3FFB217611CAC1C7813ACEA4159"
     },
     {
       "name": "bitarray",
@@ -17,8 +17,8 @@
       "filename": "bitarray-3.12.4-cp314-cp314-win_amd64.whl",
       "url": "https://files.pythonhosted.org/packages/4e/ae/64da671500a0d6b9dd8f313ff123af70347ec3ac9a13a157a68e8dd02b1c/bitarray-3.12.4-cp314-cp314-win_amd64.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 183857,
+      "sha256": "0037B2393AF8ABEB15BC6A0946239452AF214825A5EA777F317CA1C2E2334C7C"
     },
     {
       "name": "bitstring",
@@ -26,8 +26,8 @@
       "filename": "bitstring-4.3.1-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/75/2d/174566b533755ddf8efb32a5503af61c756a983de379f8ad3aed6a982d38/bitstring-4.3.1-py3-none-any.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 71930,
+      "sha256": "69D1587F0AC18DC7D93FC7E80D5F447161A33E57027E726DC18A0A8BACF1711A"
     },
     {
       "name": "cffi",
@@ -35,8 +35,8 @@
       "filename": "cffi-2.1.1-cp314-cp314-win_amd64.whl",
       "url": "https://files.pythonhosted.org/packages/a7/06/1c3e01e3ba14c39f6d10bfbac52753b7e22259e38088e5cfe1d704918690/cffi-2.1.1-cp314-cp314-win_amd64.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 187949,
+      "sha256": "3222BA5D678F80A030E6AFBCC33DC1AE5CB45FACABB61CEE2C7016B8432FDE48"
     },
     {
       "name": "click",
@@ -44,8 +44,8 @@
       "filename": "click-8.5.1-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/31/7d/164b7ffc8624fe9efb4221bf9af485d5c1e41b9ae118045d2b6dc5457d8b/click-8.5.1-py3-none-any.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 126163,
+      "sha256": "8BB5376D2006950386F8C6427613334A2ACADC5F559CB80E638D00B4DF957E37"
     },
     {
       "name": "colorama",
@@ -53,8 +53,8 @@
       "filename": "colorama-0.4.6-py2.py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 25335,
+      "sha256": "4F1D9991F5ACC0CA119F9D443620B77F9D6B33703E51011C16BAF57AFB285FC6"
     },
     {
       "name": "cryptography",
@@ -62,8 +62,8 @@
       "filename": "cryptography-50.0.2-cp311-abi3-win_amd64.whl",
       "url": "https://files.pythonhosted.org/packages/9a/4f/adfc442765721292fff86d314ce385d3249d22db42295c0dd057727b60f3/cryptography-50.0.2-cp311-abi3-win_amd64.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 3824692,
+      "sha256": "7AFA5A6602A9F29AF1F3A2965F831BAE7C9D5D597B7CBB716D41AB3B7D89879C"
     },
     {
       "name": "esptool",
@@ -71,8 +71,8 @@
       "filename": "esptool-5.3.1-py3-none-any.whl",
       "url": null,
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 609414,
+      "sha256": "40DDA44A755D472F1CABF574CB80145C6013825FEDC636C0D6DE3CB5E43BF1B0"
     },
     {
       "name": "intelhex",
@@ -80,8 +80,8 @@
       "filename": "intelhex-2.3.0-py2.py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/97/78/79461288da2b13ed0a13deb65c4ad1428acb674b95278fa9abf1cefe62a2/intelhex-2.3.0-py2.py3-none-any.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 50914,
+      "sha256": "87CC5225657524EC6361354BE928ADFD56BCF2A3DCC646C40F8F094C39C07DB4"
     },
     {
       "name": "markdown-it-py",
@@ -89,8 +89,8 @@
       "filename": "markdown_it_py-4.3.0-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/c9/31/5f0ac2f1a1c67423c995c731a11cd4ad05d081a2be969d74f868bdb9cc70/markdown_it_py-4.3.0-py3-none-any.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 96951,
+      "sha256": "7AA1511A46C39138DE78D9EBA92CE47E63124D8003FC98B3A351909E04239EFA"
     },
     {
       "name": "mdurl",
@@ -98,8 +98,8 @@
       "filename": "mdurl-0.1.2-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 9979,
+      "sha256": "84008A41E51615A49FC9966191FF91509E3C40B939176E643FD50A5C2196B8F8"
     },
     {
       "name": "pycparser",
@@ -107,8 +107,8 @@
       "filename": "pycparser-3.12-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/b6/ae/315bbeee126a769cbde43cf4908acb4b40408d8bf8bbf334dd7368d8dadf/pycparser-3.12-py3-none-any.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 62600,
+      "sha256": "A076F3F489B39B43ED13563A1DAFE42447445BEC2E294154EC5C57FCDDA4C85E"
     },
     {
       "name": "Pygments",
@@ -116,8 +116,8 @@
       "filename": "pygments-2.21.0-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 1250147,
+      "sha256": "2363C69B61C4A97C838DA3B130DCD6468F4848992B21A82F2A63EC34377137D9"
     },
     {
       "name": "pyserial",
@@ -125,8 +125,8 @@
       "filename": "pyserial-3.5-py2.py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/07/bc/587a445451b253b285629263eb51c2d8e9bcea4fc97826266d186f96f558/pyserial-3.5-py2.py3-none-any.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 90585,
+      "sha256": "C4451DB6BA391CA6CA299FB3EC7BAE67A5C55DDE170964C7A14CEEFEC02F2CF0"
     },
     {
       "name": "PyYAML",
@@ -134,8 +134,8 @@
       "filename": "pyyaml-6.0.3-cp314-cp314-win_amd64.whl",
       "url": "https://files.pythonhosted.org/packages/23/20/bb6982b26a40bb43951265ba29d4c246ef0ff59c9fdcdf0ed04e0687de4d/pyyaml-6.0.3-cp314-cp314-win_amd64.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 156429,
+      "sha256": "4A2E8CEBE2FF6AB7D1050ECD59C25D4C8BD7E6F400F5F82B96557AC0ABAFD0AC"
     },
     {
       "name": "reedsolo",
@@ -143,8 +143,8 @@
       "filename": "reedsolo-1.7.0-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/09/19/1bb346c0e581557c88946d2bb979b2bee8992e72314cfb418b5440e383db/reedsolo-1.7.0-py3-none-any.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 32360,
+      "sha256": "2B6A3E402A1EE3E1EEA3F932F81E6C0B7BBC615588074DCA1DBBCDEB055002BD"
     },
     {
       "name": "rich",
@@ -152,8 +152,8 @@
       "filename": "rich-15.0.0-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 310654,
+      "sha256": "33BD4EF74232FB73FE9279A257718407F169C09B78A87AD3D296F548E27DE0BB"
     },
     {
       "name": "rich-click",
@@ -161,8 +161,15 @@
       "filename": "rich_click-1.9.9-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/b5/51/b2b91aec091e86bc961e5164f00207d89f133cc82b5ddad541d2132ea819/rich_click-1.9.9-py3-none-any.whl",
       "kind": "wheel",
-      "size": null,
-      "sha256": null
+      "size": 71910,
+      "sha256": "365E7A9D0ADB42E41EA832A0A12E02C44C079A26536DEE688125EB9814F97274"
     }
-  ]
+  ],
+  "esptoolSource": {
+    "filename": "esptool-5.3.1.tar.gz",
+    "version": "5.3.1",
+    "url": "https://files.pythonhosted.org/packages/76/ac/d2016cf6b3709d0e0166f45f84bc6e2d717757b5f59020ccb34de08d1b9b/esptool-5.3.1.tar.gz",
+    "size": 488230,
+    "sha256": "125781F36E6A2D08C484524A45F340694675368B5EEEAD9D0CB21B2034A91D98"
+  }
 }

@@ -65,7 +65,13 @@ $badPin.sha256 = 'F' * 64
 Refuse 'bad-hash' (Save-Manifest 'bad-hash.json' @($badPin,$inputs[1],$inputs[2])) '*does not match*'
 $badPin.size = $null
 Refuse 'unpinned' (Save-Manifest 'unpinned.json' @($badPin,$inputs[1],$inputs[2])) '*has not pinned*'
-Refuse 'draft-manifest' (Join-Path $PSScriptRoot 'flash-runtime-inputs.json') '*has not pinned*'
+$draft = @(foreach ($pin in $inputs) {
+    $copy = $pin.Clone()
+    $copy.size = $null
+    $copy.sha256 = $null
+    $copy
+})
+Refuse 'draft-manifest' (Save-Manifest 'draft.json' $draft) '*has not pinned*'
 Add-Fixture 'unsafe-1.0-py3-none-any.whl' 'wheel' @{'../escaped.py'='fixture traversal'}
 Refuse 'unsafe' (Save-Manifest 'unsafe.json' $inputs.ToArray()) '*unsafe path*'
 Add-Fixture 'overlap-1.0-py3-none-any.whl' 'wheel' @{'ESpTool/__init__.py'='fixture duplicate'}
