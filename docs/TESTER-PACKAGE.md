@@ -1,6 +1,6 @@
 # Firmware Loader tester package (L11 / LUF-0011a)
 
-L11 is “Tester package: installer and instructions.” The existing release plan also requires “clean-machine installation, operator guidance and support/recovery documentation.” The local package assembler supplies the layout, byte checks and operator guide. Separate acceptance covers the installer, physical operations, signing and distribution.
+L11 is “Tester package: installer and instructions.” The existing release plan also requires “clean-machine installation, operator guidance and support/recovery documentation.” The local package assembler supplies the layout, byte checks and a short guide shipped as README.md. The guide covers the explicit board choice, release review, verified result and stop messages. Separate acceptance covers the installer, physical operations, signing and distribution.
 
 ## Inputs and layout
 

@@ -115,6 +115,7 @@ public partial class MainWindow : Window
     {
         SafetyFooter.Text = PreviewFooter;
         UpdatePanel.Invalidate();
+        UpdatePanel.Visibility = Visibility.Collapsed;
         InspectionResultPanel.Visibility = Visibility.Collapsed;
         InspectionHeading.Text = string.Empty;
         InspectionSummary.Text = string.Empty;
@@ -150,7 +151,9 @@ public partial class MainWindow : Window
 
         SelectedProductName.Text = snapshot.Product.DisplayName;
         SelectedProductDescription.Text = snapshot.Product.Description;
-        SelectedProductStatus.Text = snapshot.Status;
+        SelectedProductStatus.Text = snapshot.OfflineBundleInspectionAvailable
+            ? "For the board A qualification test, connect only your assigned board and choose Install signed qualification release. Administrator rights are required for this build."
+            : snapshot.Status;
         ContinueButton.IsEnabled = snapshot.OfflineBundleInspectionAvailable;
         InstallReleaseButton.IsEnabled = snapshot.OfflineBundleInspectionAvailable;
     }
@@ -197,11 +200,16 @@ public partial class MainWindow : Window
                     "Set board A", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes,
                 CancellationToken.None);
             ShowInstallMessage(prepared.Heading, prepared.Detail);
-            if (prepared.Workflow is not null) { UpdatePanel.Workflow = prepared.Workflow; SafetyFooter.Text = QualificationFooter; }
+            if (prepared.Workflow is not null)
+            {
+                UpdatePanel.Workflow = prepared.Workflow;
+                UpdatePanel.Visibility = Visibility.Visible;
+                SafetyFooter.Text = QualificationFooter;
+            }
         }
         catch (Exception)
         {
-            ShowInstallMessage("Preparation stopped", "The board or the flash tool did not respond as expected. Nothing was written. Unplug the board, plug it back in and try again. If it happens again, report it with the time it happened.");
+            ShowInstallMessage("Preparation stopped", "The board or the flash tool did not respond as expected during preparation. No update was started. Contact your test coordinator with this message and the time it happened.");
         }
         finally
         {

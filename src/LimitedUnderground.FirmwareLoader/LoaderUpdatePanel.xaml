@@ -6,7 +6,7 @@
   <StackPanel>
    <TextBlock Text="{Binding SessionLabel}" Foreground="#800000" FontWeight="Bold" TextWrapping="Wrap" />
    <TextBlock Text="Install firmware" FontSize="19" FontWeight="Bold" Margin="0,10,0,8" />
-   <TextBlock Text="Choose the board" Margin="0,0,0,4" />
+   <TextBlock x:Name="DeviceInstructionText" Text="{Binding DeviceInstruction}" TextWrapping="Wrap" Margin="0,0,0,4" />
    <ComboBox x:Name="DeviceList" ItemsSource="{Binding Choices}" DisplayMemberPath="DisplayName"
     SelectedItem="{Binding SelectedChoice, Mode=TwoWay}" IsEnabled="{Binding CanChoose}" MinHeight="32"
     AutomationProperties.Name="Choose the board" />

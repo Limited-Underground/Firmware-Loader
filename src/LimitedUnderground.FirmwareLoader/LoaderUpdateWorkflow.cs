@@ -5,7 +5,12 @@ namespace LimitedUnderground.FirmwareLoader;
 
 internal sealed class LoaderDeviceChoice
 {
-    internal LoaderDeviceChoice(HostSelection selection, int number) { Selection = selection; DisplayName = $"Heltec V4 board on USB ({number}) · HTIT-WB32LAF V4.2"; }
+    internal LoaderDeviceChoice(HostSelection selection, int number, bool qualification)
+    {
+        Selection = selection;
+        DisplayName = qualification ? "Board A · Heltec V4 · HTIT-WB32LAF V4.2" :
+            $"Heltec V4 board on USB ({number}) · HTIT-WB32LAF V4.2";
+    }
     internal HostSelection Selection { get; }
     public string DisplayName { get; }
 }
@@ -52,7 +57,7 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
         this.production = production;
         // Never project caller-supplied identifiers/paths into the visible device list.
         Choices = choices.Where(s => s.Target == "heltec_v4_bench" && s.Model == "HTIT-WB32LAF V4.2" && s.Generation != 0)
-            .Select((s, i) => new LoaderDeviceChoice(s, i + 1)).ToArray();
+            .Select((s, i) => new LoaderDeviceChoice(s, i + 1, production)).ToArray();
         heading = "Choose the intended device";
         detail = "No device is selected automatically. Choose one device, review the checks, then confirm this exact attempt.";
     }
@@ -62,6 +67,9 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     public bool IsProduction => factory is not null && production;
     public string SessionLabel => IsProduction ? "QUALIFICATION RELEASE — board A only · writes to the connected board" :
         IsFixture ? "SIMULATED REVIEW — no physical device operation" : "PREVIEW — inspection only";
+    public string DeviceInstruction => IsProduction
+        ? "Choose Board A below. Keep only the assigned board connected. Then review the firmware and tick the confirmation box."
+        : "Choose the board";
     public string Heading => heading;
     public string Detail => detail;
     public string Target => selected is null ? "Target: no device selected" : $"Target: {LoaderProductCatalog.Trail.DisplayName} · HTIT-WB32LAF V4.2";
@@ -75,13 +83,24 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
     public bool CanConfirm => engine?.State == HostUpdateState.Ready && !running;
     public bool CanStart => CanConfirm && confirmed && (!uncertain || recovery);
     public bool CanCancel => running || engine?.State == HostUpdateState.Ready;
-    public bool CanReviewRecovery => uncertain && !running && selected is not null;
+    public bool CanReviewRecovery => !IsProduction && uncertain && !running && selected is not null;
     // ---- L9 tester flow: step list, plain summary, next step, support file ----
     internal static readonly string[] StepLabels = { "Check the board", "Write the firmware", "Verify the written bytes", "Check that it starts" };
     public IReadOnlyList<LoaderStep> Steps => BuildSteps();
     public double ProgressValue => Steps.Count(s => s.Status == LoaderStepStatus.Done) / (double)StepLabels.Length;
     public string Summary => engine is null ? "No firmware release is ready to install yet." :
-        $"{(recovery ? "Put back" : "Install")} {LoaderProductCatalog.Trail.DisplayName}, release generation {engine.ReleaseManifest.Generation}, on the selected Heltec V4 board.";
+        engine.State switch
+        {
+            HostUpdateState.Verified =>
+                $"Installed {LoaderProductCatalog.Trail.DisplayName}, release generation {engine.ReleaseManifest.Generation}, on {(IsProduction ? "board A" : "the selected board")}." +
+                " Firmware and startup checks passed.",
+            HostUpdateState.Recovered =>
+                $"Restored {LoaderProductCatalog.Trail.DisplayName}, release generation {engine.ReleaseManifest.Generation}." +
+                " Firmware and startup checks passed.",
+            HostUpdateState.OutcomeUnknown or HostUpdateState.RecoveryReview =>
+                $"The firmware now on the board is unconfirmed. This attempt used {LoaderProductCatalog.Trail.DisplayName}, release generation {engine.ReleaseManifest.Generation}.",
+            _ => $"{(recovery ? "Put back" : "Install")} {LoaderProductCatalog.Trail.DisplayName}, release generation {engine.ReleaseManifest.Generation}, on the selected Heltec V4 board.",
+        };
     public string NextStep => NextStepText();
     public bool CanSaveSupportFile => engine is not null || uncertain;
     public bool IsBusy => running;
@@ -257,9 +276,13 @@ internal sealed class LoaderUpdateWorkflow : INotifyPropertyChanged
                 "Keep the board plugged in until all four steps are done.",
             HostUpdateState.Verified => "Done. The board is running the new firmware; you can unplug it.",
             HostUpdateState.Recovered => "The previous firmware is back. Save a support file and report the failed install.",
+            HostUpdateState.NoWriteStopped when uncertain || engine.UncertaintyMarkerRetained =>
+                "Stop here. Save a support file and contact your test coordinator before another attempt.",
             HostUpdateState.NoWriteStopped when engine.BindingFault is HostBindingFault.DeviceDisconnected or HostBindingFault.DeviceChanged =>
                 "Nothing was written. Plug the board back in, choose it again and start again.",
             HostUpdateState.NoWriteStopped => "Nothing was written. Save a support file if this happens again.",
+            HostUpdateState.OutcomeUnknown or HostUpdateState.RecoveryReview when IsProduction =>
+                "Do not unplug, retry or reset the board. Save a support file and contact your test coordinator. A restore needs a separately approved signed release.",
             HostUpdateState.OutcomeUnknown or HostUpdateState.RecoveryReview =>
                 "Do not unplug, retry or reset the board. Save a support file and send it before doing anything else.",
             _ => "Choose the board to install on.",

@@ -33,7 +33,7 @@
                 <StackPanel x:Name="ProductChoicePanel">
                     <TextBlock Text="Which Limited Underground system are you working with?" FontWeight="Bold" FontSize="21" TextWrapping="Wrap"
                                automation:AutomationProperties.HeadingLevel="Level2" />
-                    <TextBlock Text="Your choice opens a product-scoped inspection session. It does not select a device or authorize firmware installation."
+                    <TextBlock Text="Choose MeshTrail for the assigned board A qualification test. You can also inspect a firmware archive."
                                TextWrapping="Wrap" Margin="0,8,0,22" MaxWidth="720" HorizontalAlignment="Left" />
 
                     <UniformGrid Columns="2">
@@ -86,7 +86,7 @@
                             <TextBlock x:Name="InspectionAdmission" TextWrapping="Wrap" FontWeight="Bold" Margin="0,6,0,0" />
                         </StackPanel>
                     </Border>
-                    <local:LoaderUpdatePanel x:Name="UpdatePanel" />
+                    <local:LoaderUpdatePanel x:Name="UpdatePanel" Visibility="Collapsed" />
                     <Button Content="Back to system choice" Click="BackButton_Click" Width="170" Height="34" HorizontalAlignment="Left" Margin="0,14,0,0" />
                 </StackPanel>
             </Grid>

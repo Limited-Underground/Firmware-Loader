@@ -14,12 +14,15 @@ internal static class LoaderUpdateUiTests
     {
         ("UI production panel has no choices or operational authority", () => Sta(Production)),
         ("UI explicit selection plus separate confirmation required", () => Sta(Selection)),
+        ("UI qualification choice names board A and waits for explicit selection", () => Sta(QualificationSelection)),
         ("UI stale selection consumes old confirmation and cannot start", () => Sta(Reselect)),
         ("UI file product and close invalidation cancel actual engine", () => Sta(Invalidation)),
         ("UI cancellation retains uncertainty and ignores late completion", () => Sta(Cancel)),
         ("UI actual engine renders write readback boot and verified states", () => Sta(Progress)),
         ("UI failed independent readback never shows success", () => Sta(ReadFailure)),
+        ("UI result identifies installed firmware only after verification", () => Sta(InstalledFirmware)),
         ("UI recovery requires separately admitted original and confirmation", () => Sta(Recovery)),
+        ("UI qualification interruption keeps uncertainty and directs signed recovery review", () => Sta(QualificationRecovery)),
         ("UI private exception and identifier strings never enter visible projection", () => Sta(Privacy)),
         ("UI actual MainWindow hosts blocked panel and renders at minimum size", () => Sta(MainWindowIntegration)),
         ("UI support file has fixed fields only and no identifiers", () => Sta(SupportFile)),
@@ -106,6 +109,21 @@ internal static class LoaderUpdateUiTests
         Wait(Start(p)); Require(m.Heading == "Update verified" && f.Adapter.Writes == 1 && !m.CanStart, "one attempt only");
         Wait(Start(p)); Require(f.Adapter.Writes == 1, "old action cannot resubmit");
     }
+    private static void QualificationSelection()
+    {
+        using var fixture = new HostUpdateEngineTests.Fixture(select: false);
+        var model = new LoaderUpdateWorkflow([fixture.Selection], (_, _) => fixture.NewEngine(), production: true);
+        var panel = Panel(model);
+        Drain();
+        var list = (ComboBox)panel.FindName("DeviceList");
+        Require(list.SelectedIndex == -1 && !model.CanStart && !model.CanConfirm, "qualification waits for explicit selection");
+        Require(model.Choices.Single().DisplayName == "Board A · Heltec V4 · HTIT-WB32LAF V4.2", "only the admitted board A choice is named");
+        Require(((TextBlock)panel.FindName("DeviceInstructionText")).Text == model.DeviceInstruction &&
+            model.DeviceInstruction.Contains("assigned board", StringComparison.Ordinal), "actual instruction explains physical matching");
+        Select(panel);
+        Require(model.CanConfirm && !model.CanStart && fixture.Adapter.Writes == 0, "selection grants no automatic confirmation or write");
+        Render(panel, "14-qualification-selection");
+    }
     private static void Reselect()
     {
         using var f = new HostUpdateEngineTests.Fixture(select: false); var m = Model(f); var p = Panel(m); Select(p); Confirm(p);
@@ -154,6 +172,33 @@ internal static class LoaderUpdateUiTests
         boot.SetResult(new(f.Manifest.ImageDigest, true, true)); Wait(run); Require(m.Heading == "Update verified", "full verification");
         Require(StepCodes(m) == "DDDD" && m.ProgressValue == 1 && m.NextStep.StartsWith("Done", StringComparison.Ordinal), "all steps done only when verified"); Render(p, "08-verified");
     }
+    private static void InstalledFirmware()
+    {
+        using var fixture = new HostUpdateEngineTests.Fixture(select: false, generation: 11);
+        var model = new LoaderUpdateWorkflow([fixture.Selection], (_, _) => fixture.NewEngine(), production: true);
+        var panel = Panel(model);
+        Select(panel);
+        Require(!model.Summary.StartsWith("Installed", StringComparison.Ordinal), "preparation is not installed firmware");
+        Confirm(panel);
+        Wait(Start(panel));
+        Require(model.Heading == "Update verified" &&
+            ((TextBlock)panel.FindName("SummaryText")).Text ==
+                "Installed Limited Underground MeshTrail, release generation 11, on board A. Firmware and startup checks passed.",
+            "actual verified summary names the installed release");
+        Require(model.ImageDigest == "Image SHA-256: " + fixture.Manifest.ImageDigest, "exact firmware identity remains available");
+        Render(panel, "15-qualification-verified");
+
+        using var failed = new HostUpdateEngineTests.Fixture(select: false, generation: 12);
+        var uncertain = Model(failed);
+        var failedPanel = Panel(uncertain);
+        Select(failedPanel);
+        failed.Adapter.Boot = () => Task.FromResult(new HostBootResult(failed.Manifest.ImageDigest, false, true));
+        Confirm(failedPanel);
+        Wait(Start(failedPanel));
+        Require(uncertain.Summary.StartsWith("The firmware now on the board is unconfirmed.", StringComparison.Ordinal) &&
+            !uncertain.Summary.StartsWith("Installed", StringComparison.Ordinal) && !uncertain.CanStart,
+            "failed startup cannot publish an installed result");
+    }
     private static void ReadFailure()
     {
         using var f = new HostUpdateEngineTests.Fixture(select: false); var m = Model(f); var p = Panel(m); Select(p); Confirm(p);
@@ -169,7 +214,32 @@ internal static class LoaderUpdateUiTests
         ((Button)p.FindName("RecoveryButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Require(m.CanConfirm && !m.CanStart && m.ActionLabel == "Restore reviewed original", "separate recovery confirmation");
         Render(p, "09-recovery-ready"); Confirm(p); Wait(Start(p));
         Require(m.Heading == "Original restored" && m.Detail.Contains("does not make", StringComparison.Ordinal), "recovery outcome distinct");
-        Require(StepCodes(m) == "DDDD" && m.Summary.StartsWith("Put back", StringComparison.Ordinal) && m.NextStep.Contains("support file", StringComparison.Ordinal), "recovery steps and next step"); Render(p, "10-recovered");
+        Require(StepCodes(m) == "DDDD" && m.Summary.StartsWith("Restored", StringComparison.Ordinal) && m.NextStep.Contains("support file", StringComparison.Ordinal), "recovery steps and next step"); Render(p, "10-recovered");
+    }
+    private static void QualificationRecovery()
+    {
+        using var fixture = new HostUpdateEngineTests.Fixture(select: false);
+        int preparations = 0;
+        var model = new LoaderUpdateWorkflow([fixture.Selection], (_, _) =>
+        {
+            preparations++;
+            return fixture.NewEngine();
+        }, production: true);
+        var panel = Panel(model);
+        Select(panel);
+        fixture.Adapter.Write = () => Task.FromException(new IOException("private connection detail COM99"));
+        Confirm(panel);
+        Wait(Start(panel));
+        Require(model.Heading.StartsWith("Outcome unknown", StringComparison.Ordinal) &&
+            model.NextStep.Contains("separately approved signed release", StringComparison.Ordinal) &&
+            !model.CanStart && model.CanSaveSupportFile && !model.CanReviewRecovery,
+            "qualification interruption has actionable signed recovery guidance");
+        Require(!((Button)panel.FindName("RecoveryButton")).IsEnabled, "unsupported recovery action stays disabled");
+        ((Button)panel.FindName("RecoveryButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Require(preparations == 1 && fixture.Adapter.Writes == 1 && fixture.Journal.HasUnresolvedOperation,
+            "recovery click cannot start a different operation or clear uncertainty");
+        Require(!model.Detail.Contains("COM99", StringComparison.Ordinal), "connection diagnostics stay private");
+        Render(panel, "16-qualification-uncertain");
     }
     private static void Privacy()
     {
@@ -216,6 +286,9 @@ internal static class LoaderUpdateUiTests
         var panel = (LoaderUpdatePanel)window.FindName("UpdatePanel");
         Require(panel.IsVisible == false || panel.Workflow.Choices.Count == 0, "main production no choices");
         Require(!panel.Workflow.CanStart && panel.Workflow.Heading == "Installation unavailable", "main invalidated disabled panel");
+        Require(panel.Visibility == Visibility.Collapsed, "inactive install panel is hidden until a release is prepared");
+        Require(((TextBlock)window.FindName("SelectedProductStatus")).Text.Contains("Administrator rights", StringComparison.Ordinal),
+            "qualification access requirement is visible before preparation");
         var content = (FrameworkElement)window.Content; window.Content = null; Render(content, "12-main-window-top", 720, 520);
         var scroll = FindDescendants<ScrollViewer>(content).First(); scroll.ScrollToEnd(); Drain();
         Render(content, "13-main-window-bottom", 720, 520); window.Close();

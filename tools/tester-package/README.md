@@ -1,24 +1,54 @@
 # Limited Underground Firmware Loader — MeshTrail tester guide
 
-Use the package and USB board assigned to you by your Limited Underground test coordinator. Ask the person who sent the package to confirm its identity and your test scope before you start. This guide covers the approved MeshTrail qualification test. The Display entry is outside this test.
+Use only the package, board and test instructions assigned to you by your Limited Underground test coordinator. Flashing replaces the board's firmware. Ask the coordinator to confirm the package, the board and permission for this test before starting.
 
-## Install the Loader
+This build supports the board A qualification test only. If you were assigned another board, ask for a supported build and release. A package marked **Unsigned package fixture — do not install or flash** is a host test fixture. Stop there.
 
-1. Confirm you have the approved package for Windows 11 Pro 25H2 x64. Use the package identity and handoff supplied by your test coordinator. If something is missing or Windows cannot verify the installer from the expected publisher, stop and ask for a verified copy.
-2. Keep the package folders together. Open `installer/FirmwareLoaderSetup.exe` and follow its setup prompts. The administrator approves setup so the Loader can prepare its protected recovery storage. If setup reports a missing prerequisite or cannot prepare storage, ask your coordinator.
-3. Open **Limited Underground Firmware Loader**. Follow the access instructions your coordinator gave you for the exact build. The current board A qualification flow requires administrator rights. Standard-user qualification is a separate acceptance check.
+## Install and open
 
-## Install MeshTrail firmware on the assigned board
+1. Use the Windows 11 Pro 25H2 x64 PC agreed with your coordinator. Keep the package folders together. The coordinator must supply the expected package identity and installer publisher.
+2. Open **installer/FirmwareLoaderSetup.exe**. Check that Windows shows the expected publisher before approving setup. If the installer is missing, unsigned or from a different publisher, stop and request a verified package.
+3. Follow setup's instructions. An administrator approves installation and prepares recovery storage. If Windows reports a missing .NET 10 Desktop Runtime, or setup cannot finish, contact the coordinator for the approved prerequisite and installation help.
+4. Open **Limited Underground Firmware Loader**. This qualification build also requires **Run as administrator** to install firmware. Right-click the installed Loader and choose that action when your approved test calls for it. Standard-user daily installation still needs separate implementation and validation.
 
-1. Ask your coordinator to confirm the board and the install and restore folders for this test. Connect that one board with a data-capable USB cable.
-2. In the Loader choose **Limited Underground MeshTrail**, then **Install signed qualification release**. Choose the supplied `firmware/install` folder. Keep all four release files together.
-3. Read the board and release details. Continue only if they match your assignment. Confirm once and leave the board and cable connected while the Loader writes, checks the bytes and checks startup.
-4. Record success only when the Loader says **Update verified**. If it refuses the release, the board disconnects, or the result is uncertain, leave the setup as it is and contact your coordinator before retrying.
+## Choose the board and firmware
 
-## Restore MeshTrail firmware
+1. Connect only the assigned board A with a data-capable USB cable. Close other applications that might use the board. Keep the matching install and restore folders supplied by the coordinator.
+2. Choose **Limited Underground MeshTrail**, then **Install signed qualification release**. Choose the package's **firmware/install** folder. Keep release.json, release.sig, raw.bin and padded.bin together.
+3. Wait at **Step 1 of 4: checking the release and the board**. No update starts during this preparation.
+4. On a PC with no board A set, the Loader asks **Set board A**. Approve only if the coordinator authorized this PC's first setup with this exact board. Ask for help if you are unsure. This choice cannot be changed from the Loader later.
+5. At **Board A ready**, choose **Board A · Heltec V4 · HTIT-WB32LAF V4.2** in the board list. The Loader leaves the choice empty until you select it.
+6. Compare the MeshTrail release generation in the summary with the coordinator's assignment. Open **Details** to compare **Image SHA-256** if requested. Tick the confirmation box for this board and release, then choose **Start reviewed update** once.
 
-Use the separately signed `firmware/restore` folder supplied for this exact board and installed release. The coordinator must confirm that the board is in the state the restore expects. Use **Install signed qualification release** again with that folder and confirm the restore details. Wait for **Update verified**. Keep the result and contact the coordinator if the expected startup check fails.
+## Wait for the result
 
-## Get help
+Leave the board and cable connected through all four steps.
 
-On the install panel choose **Save a support file** when it is available. Choose where to save the text file, review it, then send it privately to the Limited Underground test coordinator who assigned the package. Include what happened and when. If the button is unavailable, send the visible step and message instead. Share the support file through the agreed test channel. Keep firmware files and board details private.
+| Step | What the Loader does |
+| --- | --- |
+| Check the board | Checks the release and the board state it requires. |
+| Write the firmware | Replaces the app firmware. |
+| Verify the written bytes | Checks the written app and protected regions. |
+| Check that it starts | Waits for the expected firmware and startup checks. |
+
+Success requires **Update verified** and all four steps marked done. The summary then says **Installed Limited Underground MeshTrail, release generation …**, identifying the release now running. Compare that generation with the assignment and record the result. The image SHA-256 is in **Details**. You may unplug after the Loader says it is done.
+
+## If something stops
+
+| Message or problem | What to do |
+| --- | --- |
+| **Run the Loader as administrator** | Close it and follow the approved administrator instructions above. |
+| **Flash tool unavailable** or **Recovery storage unavailable** | Ask the coordinator to check the package or installation. |
+| **No board found** | Check the assigned board's data cable, then choose the signed release again. Contact the coordinator if it is still missing. |
+| **More than one board connected** | Keep only the assigned board connected, then choose the signed release again. |
+| **Not board A**, a release refusal, or unexpected board details | Stop and send the visible message to the coordinator. Keep the assigned files together. |
+| Cable drop, failed verification, **Outcome unknown**, or **Recovery review required** | Stop. Do not retry, reset, unplug further or try a restore. Save a support file and contact the coordinator first. |
+| **Stop here** after a stopped attempt | Save a support file and ask the coordinator before another attempt. |
+
+Choose **Save a support file** when available. Review it and send it privately through the agreed test channel, with what happened and when. If it is unavailable during preparation, send the visible message instead. Keep firmware files and board details private.
+
+## Restore only when instructed
+
+A restore uses its own approved, signed **firmware/restore** folder and the board state that release expects. Wait for the coordinator's instruction for that restore session. Use **Install signed qualification release** again with the restore folder and review its generation before confirming. A restore can have a higher release generation while putting back earlier firmware.
+
+Wait for **Update verified**, all four completed steps and the installed generation assigned for the restore. An uncertain attempt first needs the coordinator's recovery assessment. The disabled **Review recovery** button supplies no shortcut.

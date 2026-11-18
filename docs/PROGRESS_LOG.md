@@ -9,6 +9,10 @@ the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acc
 
 ## 2026-11-17
 
+### L9 and L11 Walk through the tester flow on the host
+
+The qualification screens now explain the board A choice and administrator requirement, hide the inactive install panel, and name the installed MeshTrail generation only after verification. Interrupted qualification attempts direct the operator to the coordinator and a separately approved signed restore. The shipped tester guide now covers first use, every install step, stop messages and the restore boundary. Host regressions cover explicit board choice, verified versus uncertain firmware results, and the disabled unsupported recovery action. The final installer, standard-user daily operation, signed tester release, clean-Windows use and physical acceptance remain open.
+
 ### I-071 Keep Loader validation evidence with the build outputs
 
 The full host gate and packaging fixtures now keep dated runs under the shared Loader evidence root. The host gate puts child-process scratch inside its run and restores the caller’s temporary paths on exit. Hosted CI supplies its private runner directory and keeps the existing sanitized result. The documentation fixtures still use in-memory inputs.

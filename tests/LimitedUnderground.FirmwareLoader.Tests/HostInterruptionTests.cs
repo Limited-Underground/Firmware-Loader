@@ -278,6 +278,8 @@ internal static class HostInterruptionTests
             Require(m.Heading == "Stopped before writing" && m.Detail.Contains("may require recovery review", StringComparison.Ordinal) &&
                 !m.Detail.Contains("will be required", StringComparison.Ordinal),
                 "retained marker disclosed: " + m.Detail);
+            Require(m.NextStep.StartsWith("Stop here.", StringComparison.Ordinal),
+                "retained journal marker cannot recommend a retry");
         }
     }
 
