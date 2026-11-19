@@ -167,7 +167,7 @@ public partial class MainWindow : Window
         ClearInspection();
         if (!MachineRecoveryStorePolicy.IsElevatedAdministrator())
         {
-            ShowInstallMessage("Run the Loader as administrator", "The current qualification release still needs administrator rights to protect recovery records. Close the Loader, right-click it and choose Run as administrator.");
+            ShowInstallMessage("Standard-user installation unavailable", "This build still uses the protected board A qualification setup. Ask your test coordinator about running the qualification test.");
             return;
         }
         var runtime = PackagedFlashRuntime.OpenInstalled();

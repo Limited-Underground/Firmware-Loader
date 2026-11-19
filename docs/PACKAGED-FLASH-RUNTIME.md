@@ -12,7 +12,7 @@ The [input manifest](../tools/flash-runtime-inputs.json) lists the proposed Wind
 
 PowerShell 7.5 or later is required for the packaging and setup scripts. The packaging script consumes local files only. It does not run Python or use an existing Python installation.
 
-The current board A qualification install still uses the administrator-only journal, board pin and admission clock. One-time setup prepares the journal and lease. Standard-user installs need a reviewed way to access those operations without weakening machine-wide protection.
+The current board A qualification install still uses the administrator-only journal, board pin and admission clock. One-time setup prepares the journal and lease. The host-tested qualification handler uses an existing board assignment and protected operation storage. It validates release bytes inside the trusted operation boundary. Standard-user installs still need the installed worker, local caller authentication and reviewed board assignment from setup.
 
 ## Host checks
 

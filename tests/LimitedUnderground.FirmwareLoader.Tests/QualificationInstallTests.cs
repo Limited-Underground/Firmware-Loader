@@ -21,6 +21,9 @@ internal static class QualificationInstallTests
         ("L7 install: a record for another key is refused before any write", RefusesOtherKey),
         ("L7 install: no board or two boards are refused", RefusesBoardCount),
         ("L7 install: production session is labelled as a real write, not a simulation", ProductionLabel),
+        ("L9 assigned connections install and separately restore through the protected engine", AssignedInstallAndRestore),
+        ("L9 assigned connection refuses missing assignment, bad store and substituted release", AssignedRefusals),
+        ("L9 assigned connection returns uncertainty after failed startup and blocks another attempt", AssignedUncertainOutcome),
         ("L7 install: real bench preservation plan accepts only whole sectors in the app partition", BindingGeometry),
         ("L7 install: pinned helper digest and embedded key match the committed files", PinsMatchFiles),
     };
@@ -74,6 +77,21 @@ internal static class QualificationInstallTests
         internal QualificationPrepared Prepare(bool acceptPin = true, byte[]? key = null) => Wait(QualificationInstaller.PrepareAsync(
             Controller, Folder, Board, Pin, () => Store ??= HostOperationStore.CreateIsolatedTestStore(StoreRoot),
             BenchFlash.HelperSha256, new string('A', 64), key ?? Key.ExportSubjectPublicKeyInfo(), () => Now++, () => acceptPin, CancellationToken.None));
+
+        internal QualificationOperationSession AssignedSession(Func<HostOperationStore>? openStore = null) =>
+            new(Controller, Board, Pin, openStore ?? (() => Store ??= HostOperationStore.CreateIsolatedTestStore(StoreRoot)),
+                BenchFlash.HelperSha256, Key.ExportSubjectPublicKeyInfo(), () => Now++);
+
+        internal QualificationReleaseFiles SignedFiles(byte[] next, byte[] current, ulong generation, ulong currentGeneration)
+        {
+            var release = QualificationReleaseBuilder.Build(new QualificationInputs(next, current, Boot, "fixture",
+                generation, currentGeneration, 1, Now - 1000, BenchFlash.HelperSha256));
+            var node = JsonNode.Parse(release.Manifest)!.AsObject();
+            node["publicKeyFingerprint"] = HostReleaseAdmission.Digest(Key.ExportSubjectPublicKeyInfo());
+            var manifest = Encoding.UTF8.GetBytes(node.ToJsonString());
+            var signature = Key.SignData(manifest, HashAlgorithmName.SHA256, RSASignaturePadding.Pss);
+            return new(manifest, signature, release.RawImage, release.PaddedImage);
+        }
 
         internal bool NothingWritten => Helper.Flash.AsSpan().SequenceEqual(Before) && !Helper.Commands.Contains("write");
 
@@ -184,6 +202,91 @@ internal static class QualificationInstallTests
         using var bench = new Bench();
         var workflow = bench.Prepare().Workflow!;
         Require(workflow.IsProduction && !workflow.IsFixture && workflow.SessionLabel.StartsWith("QUALIFICATION RELEASE", StringComparison.Ordinal), "label");
+    }
+
+    private static void AssignedInstallAndRestore()
+    {
+        using var bench = new Bench();
+        // The test provisions the pin as setup. The connection receives no pin or store methods.
+        var fakeMac = bench.Board.MacOf(Wait(bench.Board.SelectAsync(
+            Wait(bench.Board.FindBoardsAsync(CancellationToken.None)).Single(), CancellationToken.None)));
+        Require(fakeMac is not null && bench.Pin.TryPin(fakeMac, new string('A', 64)), "assigned fixture board");
+        var initial = QualificationReleaseFiles.TryRead(bench.Folder)!;
+        using var first = bench.AssignedSession();
+        using var second = bench.AssignedSession();
+        var result = Wait(first.PrepareAsync(initial, CancellationToken.None));
+        Require(result.CanChooseBoard && !result.CanConfirm && bench.NothingWritten, "prepare consumes no confirmation");
+        Require(!second.SelectBoard() && Wait(second.ConfirmAndRunAsync()) is null, "second connection cannot use the first preparation");
+        Require(Wait(first.ConfirmAndRunAsync()) is null && first.SelectBoard(), "confirmation needs explicit board selection");
+        initial.Manifest[0] ^= 1;
+        initial.Padded[0] ^= 1;
+        Require(Wait(first.ConfirmAndRunAsync())?.Heading == "Update verified", "unchanged admitted bytes verify");
+        Require(Wait(first.ConfirmAndRunAsync()) is null, "once only");
+        Require(bench.Store is not null && !bench.Store.HasUnresolvedOperation, "trusted completion recorded");
+        Require(bench.Helper.Flash.AsSpan((int)BenchFlash.AppOffset, bench.Candidate.Length).SequenceEqual(bench.Candidate),
+            "verified install wrote exactly the original candidate");
+
+        var restore = bench.SignedFiles(bench.Current, bench.Candidate, 3, 2);
+        Require(Wait(second.PrepareAsync(restore, CancellationToken.None)).CanChooseBoard && second.SelectBoard(),
+            "another connection prepares its own signed restore");
+        Require(Wait(second.ConfirmAndRunAsync())?.Heading == "Update verified", "restore verifies separately");
+        Require(bench.Helper.Flash.AsSpan((int)BenchFlash.AppOffset, bench.Current.Length).SequenceEqual(bench.Current) &&
+            bench.Helper.Commands.Count(command => command == "write") == 2, "exact original restored in a second operation");
+    }
+
+    private static void AssignedRefusals()
+    {
+        using var bench = new Bench();
+        var files = QualificationReleaseFiles.TryRead(bench.Folder)!;
+        using var missing = bench.AssignedSession();
+        Require(Wait(missing.PrepareAsync(files, CancellationToken.None)).Heading == "Assigned board setup required" &&
+            !bench.Pin.IsPinned && !bench.Helper.Commands.Contains("identify"), "ordinary connection cannot set board A");
+
+        var mac = bench.Board.MacOf(Wait(bench.Board.SelectAsync(
+            Wait(bench.Board.FindBoardsAsync(CancellationToken.None)).Single(), CancellationToken.None)));
+        Require(mac is not null && bench.Pin.TryPin(mac, new string('A', 64)), "assigned fixture board");
+        int previousCommands = bench.Helper.Commands.Count;
+        using var denied = bench.AssignedSession(() => throw new UnauthorizedAccessException("private denied path"));
+        var blocked = Wait(denied.PrepareAsync(files, CancellationToken.None));
+        Require(blocked.Heading == "Recovery storage unavailable" && !blocked.CanChooseBoard &&
+            !blocked.Detail.Contains("private", StringComparison.Ordinal) && bench.Helper.Commands.Count == previousCommands,
+            "untrusted storage refusal precedes board operations and hides diagnostics");
+
+        using var replaced = bench.AssignedSession();
+        files.Padded[0] ^= 1;
+        var wrongRelease = Wait(replaced.PrepareAsync(files, CancellationToken.None));
+        Require(wrongRelease.Heading == "Release not admitted" && !wrongRelease.CanChooseBoard &&
+            !replaced.SelectBoard() && Wait(replaced.ConfirmAndRunAsync()) is null && bench.NothingWritten,
+            "substituted release cannot select, confirm or write");
+
+        var store = bench.Store!;
+        using (var lease = store.TryAcquire())
+        {
+            Require(lease is not null && store.MarkUncertain(new string('B', 64)), "durable uncertainty fixture");
+        }
+        int beforeRecoveryRefusal = bench.Helper.Commands.Count;
+        using var unresolved = bench.AssignedSession();
+        Require(Wait(unresolved.PrepareAsync(QualificationReleaseFiles.TryRead(bench.Folder)!, CancellationToken.None)).Heading ==
+            "Recovery review required" && store.HasUnresolvedOperation &&
+            bench.Helper.Commands.Count == beforeRecoveryRefusal, "ordinary approval cannot clear uncertainty or reach the board");
+    }
+
+    private static void AssignedUncertainOutcome()
+    {
+        using var bench = new Bench();
+        var mac = bench.Board.MacOf(Wait(bench.Board.SelectAsync(
+            Wait(bench.Board.FindBoardsAsync(CancellationToken.None)).Single(), CancellationToken.None)));
+        Require(mac is not null && bench.Pin.TryPin(mac, new string('A', 64)), "assigned fixture board");
+        using var session = bench.AssignedSession();
+        var release = QualificationReleaseFiles.TryRead(bench.Folder)!;
+        Require(Wait(session.PrepareAsync(release, CancellationToken.None)).CanChooseBoard && session.SelectBoard(),
+            "signed attempt prepared");
+        bench.Helper.Healthy = false;
+        var outcome = Wait(session.ConfirmAndRunAsync());
+        Require(outcome is not null && outcome.Heading.StartsWith("Outcome unknown", StringComparison.Ordinal) &&
+            !outcome.CanConfirm && bench.Store is { HasUnresolvedOperation: true },
+            "failed startup is returned as uncertain and persists the original recovery requirement");
+        Require(Wait(session.ConfirmAndRunAsync()) is null, "uncertain result cannot submit another write");
     }
 
     private static void BindingGeometry()

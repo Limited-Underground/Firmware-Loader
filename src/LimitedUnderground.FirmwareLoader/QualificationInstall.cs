@@ -11,6 +11,14 @@ namespace LimitedUnderground.FirmwareLoader;
 // bundle-inspection trust list stays empty. Nothing here writes to a board.
 internal sealed record QualificationReleaseFiles(byte[] Manifest, byte[] Signature, byte[] Raw, byte[] Padded)
 {
+    internal QualificationReleaseFiles? Snapshot()
+    {
+        const int appLimit = 16 * 1024 * 1024;
+        if (Manifest is not { Length: > 0 and <= 16384 } || Signature is not { Length: > 0 and <= 384 } ||
+            Raw is not { Length: > 0 and <= appLimit } || Padded is not { Length: > 0 and <= appLimit }) return null;
+        return new((byte[])Manifest.Clone(), (byte[])Signature.Clone(), (byte[])Raw.Clone(), (byte[])Padded.Clone());
+    }
+
     internal static QualificationReleaseFiles? TryRead(string? folder)
     {
         try
@@ -204,9 +212,49 @@ internal static class QualificationInstaller
         IBenchBoard board, QualificationBoardPin pin, Func<HostOperationStore> openStore, string helperSha256,
         string pythonSha256, byte[] trustedKey, Func<long> milliseconds, Func<bool> confirmPinThisBoard, CancellationToken cancellation)
     {
-        static QualificationPrepared No(string heading, string detail) => new(null, heading, detail);
         var files = QualificationReleaseFiles.TryRead(folder);
-        if (files is null) return No("Release folder not usable", "Choose the folder made by the release builder and signed by the owner (release.json, release.sig, raw.bin, padded.bin).");
+        if (files is null) return new(null, "Release folder not usable",
+            "Choose the folder made by the release builder and signed by the owner (release.json, release.sig, raw.bin, padded.bin).");
+        return await PrepareFilesAsync(controller, files, board, pin, openStore, helperSha256, pythonSha256,
+            trustedKey, milliseconds, confirmPinThisBoard, cancellation).ConfigureAwait(true);
+    }
+
+    // The trusted operation handler receives bytes and an existing board assignment.
+    // Its caller owns and validates the protected setup, paths and server identity.
+    internal static async Task<QualificationPrepared> PrepareAssignedAsync(LoaderSessionController controller,
+        QualificationReleaseFiles supplied, IBenchBoard board, QualificationBoardPin pin, Func<HostOperationStore> openStore,
+        string helperSha256, byte[] trustedKey, Func<long> milliseconds, CancellationToken cancellation)
+    {
+        var files = supplied.Snapshot();
+        if (files is null)
+            return new(null, "Release folder not usable", "Use all four files from the assigned signed release.");
+        if (!pin.IsPinned)
+            return new(null, "Assigned board setup required", "Ask your test coordinator to set up this PC for the assigned board.");
+        HostOperationStore store;
+        try { store = openStore(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return new(null, "Recovery storage unavailable",
+                "The Firmware Loader cannot verify its protected recovery storage. Ask your test coordinator to check setup.");
+        }
+        using var lease = store.TryAcquire();
+        if (lease is null)
+            return new(null, "Recovery storage unavailable",
+                "The recovery storage is in use or unavailable. Ask your test coordinator to check the Firmware Loader setup.");
+        if (store.HasUnresolvedOperation)
+            return new(null, "Recovery review required",
+                "An earlier attempt is unresolved. Contact your test coordinator before another install or restore.");
+
+        return await PrepareFilesAsync(controller, files, board, pin, () => store, helperSha256, null,
+            trustedKey, milliseconds, null, cancellation).ConfigureAwait(true);
+    }
+
+    private static async Task<QualificationPrepared> PrepareFilesAsync(LoaderSessionController controller,
+        QualificationReleaseFiles files, IBenchBoard board, QualificationBoardPin pin, Func<HostOperationStore> openStore,
+        string helperSha256, string? pythonSha256, byte[] trustedKey, Func<long> milliseconds,
+        Func<bool>? confirmPinThisBoard, CancellationToken cancellation)
+    {
+        static QualificationPrepared No(string heading, string detail) => new(null, heading, detail);
         if (!ProductionReleaseManifest.TryParse(files.Manifest, out var manifest) || manifest is null)
             return No("Release record not accepted", "release.json is not a valid release record.");
         string keyDigest = HostReleaseAdmission.Digest(trustedKey);
@@ -222,7 +270,8 @@ internal static class QualificationInstaller
         var mac = board.MacOf(selection);
         if (!pin.IsPinned)
         {
-            if (mac is null || !confirmPinThisBoard() || !pin.TryPin(mac, pythonSha256))
+            if (mac is null || confirmPinThisBoard is null || pythonSha256 is null ||
+                !confirmPinThisBoard() || !pin.TryPin(mac, pythonSha256))
                 return No("Board A not set", "The qualification release installs only on board A. Board A was not set on this PC.");
         }
         if (!pin.Matches(mac)) return No("Not board A", "Nothing was written. This PC is set for board A, and the connected board is different. Use the assigned board or contact your test coordinator.");

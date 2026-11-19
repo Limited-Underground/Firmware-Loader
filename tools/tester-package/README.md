@@ -9,7 +9,7 @@ This build supports the board A qualification test only. If you were assigned an
 1. Use the Windows 11 Pro 25H2 x64 PC agreed with your coordinator. Keep the package folders together. The coordinator must supply the expected package identity and installer publisher.
 2. Open **installer/FirmwareLoaderSetup.exe**. Check that Windows shows the expected publisher before approving setup. If the installer is missing, unsigned or from a different publisher, stop and request a verified package.
 3. Follow setup's instructions. An administrator approves installation and prepares recovery storage. If Windows reports a missing .NET 10 Desktop Runtime, or setup cannot finish, contact the coordinator for the approved prerequisite and installation help.
-4. Open **Limited Underground Firmware Loader**. This qualification build also requires **Run as administrator** to install firmware. Right-click the installed Loader and choose that action when your approved test calls for it. Standard-user daily installation still needs separate implementation and validation.
+4. Open **Limited Underground Firmware Loader**. The current board A test needs the coordinator's approved qualification session. If you see **Standard-user installation unavailable**, stop and contact the coordinator. The installer for standard-user daily use is still pending.
 
 ## Choose the board and firmware
 
@@ -37,7 +37,7 @@ Success requires **Update verified** and all four steps marked done. The summary
 
 | Message or problem | What to do |
 | --- | --- |
-| **Run the Loader as administrator** | Close it and follow the approved administrator instructions above. |
+| **Standard-user installation unavailable** | Contact your test coordinator about the approved qualification session. |
 | **Flash tool unavailable** or **Recovery storage unavailable** | Ask the coordinator to check the package or installation. |
 | **No board found** | Check the assigned board's data cable, then choose the signed release again. Contact the coordinator if it is still missing. |
 | **More than one board connected** | Keep only the assigned board connected, then choose the signed release again. |

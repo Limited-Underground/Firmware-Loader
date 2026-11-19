@@ -7,6 +7,12 @@ does not imply that acceptance occurred on its original report date. Current
 engineering state and sequencing remain in [project status](PROJECT_STATUS.md) and
 the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acceptance.
 
+## 2026-11-18
+
+### L9 Validate the standard-user operation boundary on the host
+
+The host-tested qualification handler requires a preassigned board, takes its own copy of the release bytes and uses the existing engine and recovery store. Two simulated connections exercise separate signed install and restore attempts. The handler refuses unavailable storage, missing assignment, modified release bytes and an unresolved earlier attempt. The current app directs standard users to the test coordinator. Installer provisioning, the trusted Windows worker and clean-PC and board acceptance remain open.
+
 ## 2026-11-17
 
 ### L9 and L11 Walk through the tester flow on the host
