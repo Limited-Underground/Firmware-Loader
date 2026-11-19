@@ -3,26 +3,29 @@ using System.IO;
 namespace LimitedUnderground.FirmwareLoader;
 
 internal sealed record QualificationOperationStatus(string Heading, string Detail, string ReleaseSummary,
-    bool CanChooseBoard, bool CanConfirm);
+    bool CanChooseBoard, bool CanConfirm, string? BoardLabel = null);
 
 /// <summary>
 /// Trusted worker logic for one authenticated connection. The transport must authenticate and
 /// serialize that connection and keep other sessions away from the board for its lifetime.
-/// This handler is not registered as a Windows entry point.
+/// The scheduled worker owns the endpoint and keeps the session alive until it quiesces.
 /// </summary>
 internal sealed class QualificationOperationSession(LoaderSessionController controller, IBenchBoard board,
-    QualificationBoardPin pin, Func<HostOperationStore> openStore, string helperSha256, byte[] trustedKey,
-    Func<long> milliseconds) : IDisposable
+    QualificationBoardPin? pin, Func<HostOperationStore> openStore, string helperSha256, byte[] trustedKey,
+    Func<long> milliseconds, LoaderDailyAssignment? assignment = null, ProductionAdmissionState? assignedClock = null,
+    string? operatorSid = null) : IDisposable
 {
     private LoaderUpdateWorkflow? workflow;
     private QualificationOperationStatus status = new("Choose the signed release", "", "", false, false);
     private bool preparing;
     private bool disposed;
 
+    internal Task WhenQuiescent => workflow?.WhenQuiescent ?? Task.CompletedTask;
+
     internal QualificationOperationStatus Status => workflow is { } current ? new(
         current.Heading, current.Detail, current.Summary,
         current is { CanChoose: true, SelectedChoice: null } && current.Choices.Count == 1,
-        current.CanConfirm) : status;
+        current.CanConfirm, current.Choices.Count == 1 ? current.Choices[0].DisplayName : null) : status;
 
     internal async Task<QualificationOperationStatus> PrepareAsync(QualificationReleaseFiles files, CancellationToken cancellation)
     {
@@ -32,7 +35,7 @@ internal sealed class QualificationOperationSession(LoaderSessionController cont
         try
         {
             var prepared = await QualificationInstaller.PrepareAssignedAsync(controller, files, board, pin, openStore,
-                helperSha256, trustedKey, milliseconds, cancellation).ConfigureAwait(true);
+                helperSha256, trustedKey, milliseconds, cancellation, assignment, assignedClock, operatorSid).ConfigureAwait(true);
             if (!disposed)
             {
                 workflow = prepared.Workflow;

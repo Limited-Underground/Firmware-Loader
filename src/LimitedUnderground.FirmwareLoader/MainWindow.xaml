@@ -87,7 +87,7 @@
                         </StackPanel>
                     </Border>
                     <local:LoaderUpdatePanel x:Name="UpdatePanel" Visibility="Collapsed" />
-                    <Button Content="Back to system choice" Click="BackButton_Click" Width="170" Height="34" HorizontalAlignment="Left" Margin="0,14,0,0" />
+                    <Button x:Name="BackButton" Content="Back to system choice" Click="BackButton_Click" Width="170" Height="34" HorizontalAlignment="Left" Margin="0,14,0,0" />
                 </StackPanel>
             </Grid>
             </ScrollViewer>

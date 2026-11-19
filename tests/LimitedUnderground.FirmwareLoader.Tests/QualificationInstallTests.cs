@@ -21,6 +21,8 @@ internal static class QualificationInstallTests
         ("L7 install: a record for another key is refused before any write", RefusesOtherKey),
         ("L7 install: no board or two boards are refused", RefusesBoardCount),
         ("L7 install: production session is labelled as a real write, not a simulation", ProductionLabel),
+        ("L9 D-132 assignment rejects absent and invalid owner inputs", DailyAssignmentContract),
+        ("L9 D-132 worker enforces the operator and exact per-board release pair", DailyBoardAndOperator),
         ("L9 assigned connections install and separately restore through the protected engine", AssignedInstallAndRestore),
         ("L9 assigned connection refuses missing assignment, bad store and substituted release", AssignedRefusals),
         ("L9 assigned connection returns uncertainty after failed startup and blocks another attempt", AssignedUncertainOutcome),
@@ -202,6 +204,100 @@ internal static class QualificationInstallTests
         using var bench = new Bench();
         var workflow = bench.Prepare().Workflow!;
         Require(workflow.IsProduction && !workflow.IsFixture && workflow.SessionLabel.StartsWith("QUALIFICATION RELEASE", StringComparison.Ordinal), "label");
+    }
+
+    private const string DailyOperator = "S-1-5-21-100-200-300-1001";
+
+    private static byte[] MakeAssignment(params (string Board, string Install, string Restore)[] records) =>
+        System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            schema = 1,
+            operatorSid = DailyOperator,
+            boards = records.Select(record => new
+            {
+                fingerprint = record.Board,
+                installManifestSha256 = record.Install,
+                restoreManifestSha256 = record.Restore,
+            }),
+        });
+
+    private static LoaderDailyAssignment ReadAssignment(params (string Board, string Install, string Restore)[] records)
+    {
+        Require(LoaderDailyAssignment.TryParse(MakeAssignment(records), out var assignment), "valid owner assignment");
+        return assignment!;
+    }
+
+    private static void DailyAssignmentContract()
+    {
+        var first = (new string('A', 64), new string('B', 64), new string('C', 64));
+        foreach (byte[]? invalid in new byte[]?[]
+        {
+            null,
+            [],
+            Encoding.UTF8.GetBytes("{\"schema\":1,\"operatorSid\":\"" + DailyOperator + "\"}"),
+            MakeAssignment(),
+            Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(MakeAssignment(first)).Replace(DailyOperator, "\\uD800")),
+            MakeAssignment(("invalid fingerprint", first.Item2, first.Item3)),
+            MakeAssignment(first, (first.Item1, new string('D', 64), new string('E', 64))),
+            MakeAssignment(first, (new string('F', 64), first.Item2, new string('E', 64))),
+            MakeAssignment((first.Item1, first.Item2, first.Item2)),
+            Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(MakeAssignment(first)).Replace(DailyOperator, "S-1-5-18")),
+            Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(MakeAssignment(first)).Replace("\"schema\":1", "\"schema\":1,\"schema\":1")),
+        })
+            Require(!LoaderDailyAssignment.TryParse(invalid, out var supplied) && supplied is null, "invalid assignment refused");
+
+        var valid = ReadAssignment(first);
+        Require(valid.AllowsOperator(DailyOperator) && !valid.AllowsOperator("S-1-5-21-100-200-300-1002"),
+            "exact SID only");
+    }
+
+    private static void DailyBoardAndOperator()
+    {
+        using var bench = new Bench();
+        var files = QualificationReleaseFiles.TryRead(bench.Folder)!;
+        var restore = bench.SignedFiles(bench.Current, bench.Candidate, 3, 2);
+        string installDigest = HostReleaseAdmission.Digest(files.Manifest);
+        string restoreDigest = HostReleaseAdmission.Digest(restore.Manifest);
+        string anotherBoard = new string('F', 64);
+        var clock = ProductionAdmissionState.CreateIsolatedTestState(Path.Combine(bench.Root, "daily-clock"));
+        var mac = bench.Board.MacOf(Wait(bench.Board.SelectAsync(
+            Wait(bench.Board.FindBoardsAsync(CancellationToken.None)).Single(), CancellationToken.None)))!;
+        string approvedBoard = QualificationBoardPin.MacDigest(mac);
+
+        QualificationOperationSession Connect(LoaderDailyAssignment assignment, string sid = DailyOperator) =>
+            new(bench.Controller, bench.Board, null,
+                () => bench.Store ??= HostOperationStore.CreateIsolatedTestStore(bench.StoreRoot),
+                BenchFlash.HelperSha256, bench.Key.ExportSubjectPublicKeyInfo(), () => bench.Now++,
+                assignment, clock, sid);
+
+        var valid = ReadAssignment((approvedBoard, installDigest, restoreDigest));
+        int commands = bench.Helper.Commands.Count;
+        using (var wrongUser = Connect(valid, "S-1-5-21-100-200-300-1002"))
+            Require(Wait(wrongUser.PrepareAsync(files, CancellationToken.None)).Heading == "Windows account not approved" &&
+                bench.Helper.Commands.Count == commands && bench.Store is null, "wrong caller refused before store and board");
+
+        using (var wrongBoard = Connect(ReadAssignment((anotherBoard, installDigest, restoreDigest))))
+            Require(Wait(wrongBoard.PrepareAsync(files, CancellationToken.None)).Heading == "Board not approved",
+                "board outside approved list");
+
+        using (var wrongRelease = Connect(ReadAssignment(
+            (approvedBoard, new string('A', 64), new string('B', 64)), (anotherBoard, installDigest, restoreDigest))))
+            Require(Wait(wrongRelease.PrepareAsync(files, CancellationToken.None)).Heading == "Release not approved for this board",
+                "another approved board's exact release cannot be reused");
+
+        Require(bench.NothingWritten && !bench.Pin.IsPinned, "no first-caller enrollment or write");
+        using (var daily = Connect(valid))
+        {
+            var ready = Wait(daily.PrepareAsync(files, CancellationToken.None));
+            Require(ready.CanChooseBoard && ready.BoardLabel?.StartsWith("Assigned board", StringComparison.Ordinal) == true &&
+                daily.SelectBoard() && Wait(daily.ConfirmAndRunAsync())?.Heading == "Update verified",
+                "named operator completes exact assigned update");
+        }
+        using (var daily = Connect(valid))
+            Require(Wait(daily.PrepareAsync(restore, CancellationToken.None)).CanChooseBoard && daily.SelectBoard() &&
+                Wait(daily.ConfirmAndRunAsync())?.Heading == "Update verified" &&
+                bench.Helper.Flash.AsSpan((int)BenchFlash.AppOffset, bench.Current.Length).SequenceEqual(bench.Current),
+                "day-two restore uses its separate pinned release");
     }
 
     private static void AssignedInstallAndRestore()

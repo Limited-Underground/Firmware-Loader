@@ -9,6 +9,10 @@ the [backlog](../tasks/BACKLOG.md). Host evidence never establishes physical acc
 
 ## 2026-11-18
 
+### L9 Define the installer assignment and daily worker (D-132)
+
+The D-132 setup path binds one named Windows user to owner-approved boards and each board’s exact signed install and restore manifests. The administrator supplies the assignment once. Repeating the same setup preserves protected records. Replacing the board list requires an explicit administrator action, and uninstall retains the records. The clean-Windows and board checks remain pending.
+
 ### L9 Validate the standard-user operation boundary on the host
 
 The host-tested qualification handler requires a preassigned board, takes its own copy of the release bytes and uses the existing engine and recovery store. Two simulated connections exercise separate signed install and restore attempts. The handler refuses unavailable storage, missing assignment, modified release bytes and an unresolved earlier attempt. The current app directs standard users to the test coordinator. Installer provisioning, the trusted Windows worker and clean-PC and board acceptance remain open.

@@ -27,9 +27,104 @@ internal static class MachineRecoveryStorePolicy
             GetTokenInformation(identity.AccessToken, 20, out int elevated, sizeof(int), out _) && elevated != 0;
     }
 
+    internal static bool IsLocalSystem()
+    {
+        if (!OperatingSystem.IsWindows()) return false;
+        using var identity = WindowsIdentity.GetCurrent();
+        return identity.User is { } sid && System.Equals(sid);
+    }
+
     private static void RequirePrivilege()
     {
-        if (!IsElevatedAdministrator()) throw new InvalidOperationException("machine-store-unavailable");
+        if (!IsElevatedAdministrator() && !IsLocalSystem())
+            throw new InvalidOperationException("machine-store-unavailable");
+    }
+
+    internal static string DailyRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+        "LimitedUnderground.FirmwareLoader", "daily-v1");
+
+    // Missing setup can use the existing qualification flow. Unreadable or redirected
+    // paths cannot establish absence and therefore must keep the daily boundary closed.
+    internal static bool HasDailyState
+    {
+        get
+        {
+            string leaf = DailyRoot;
+            for (string? path = leaf; path is not null; path = Path.GetDirectoryName(path))
+            {
+                try
+                {
+                    FileAttributes attributes = File.GetAttributes(path);
+                    if (path == leaf || (attributes & (FileAttributes.Directory | FileAttributes.ReparsePoint)) != FileAttributes.Directory)
+                        return true;
+                }
+                catch (FileNotFoundException) { }
+                catch (DirectoryNotFoundException) { }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    internal static bool HasPendingDailyAssignment() =>
+        Directory.EnumerateFileSystemEntries(DailyRoot, "assignment.pending.json").Any();
+
+    internal static IDisposable OpenDailyAssignment(out FileStream assignment, out ProductionAdmissionState admission)
+    {
+        if (!IsLocalSystem()) throw new UnauthorizedAccessException("machine-store-unavailable");
+        var machine = Acquire();
+        var handles = new List<SafeFileHandle>();
+        FileStream? opened = null;
+        try
+        {
+            var directory = Pin(DailyRoot, handles);
+            if (!HasExactHandlePolicy(directory, true) || HasPendingDailyAssignment()) throw new IOException("daily-setup");
+
+            opened = OpenDailyFile("assignment.json");
+            using (OpenDailyFile("production-admission.state")) { }
+            if (HasPendingDailyAssignment()) throw new IOException("daily-setup");
+            assignment = opened;
+            admission = new ProductionAdmissionState(Path.Combine(DailyRoot, "production-admission.state"));
+            return new DailyStateGuard(opened, new PinnedChain(handles), machine);
+        }
+        catch
+        {
+            opened?.Dispose();
+            new PinnedChain(handles).Dispose();
+            machine.Dispose();
+            throw;
+        }
+    }
+
+    private static FileStream OpenDailyFile(string name)
+    {
+        string path = Path.Combine(DailyRoot, name);
+        const uint read = 0x80000000, shareRead = 1, openExisting = 3, openReparse = 0x00200000;
+        var handle = CreateFileNative(path, read, shareRead, IntPtr.Zero, openExisting, openReparse, IntPtr.Zero);
+        try
+        {
+            var final = new StringBuilder(32768);
+            if (handle.IsInvalid || !GetFileInformationByHandle(handle, out var info) ||
+                (info.Attributes & 0x410) != 0 || info.NumberOfLinks != 1 ||
+                GetFinalPathNameByHandle(handle, final, (uint)final.Capacity, 0) is 0 or >= 32768 ||
+                !string.Equals(final.ToString(), @"\\?\" + path, StringComparison.OrdinalIgnoreCase) ||
+                !HasExactHandlePolicy(handle, false)) throw new IOException("daily-setup");
+            return new FileStream(handle, FileAccess.Read);
+        }
+        catch { handle.Dispose(); throw; }
+    }
+
+    private sealed class DailyStateGuard(IDisposable file, IDisposable directory, IDisposable machine) : IDisposable
+    {
+        public void Dispose()
+        {
+            file.Dispose();
+            directory.Dispose();
+            machine.Dispose();
+        }
     }
 
     internal static HostOperationStore Open()
