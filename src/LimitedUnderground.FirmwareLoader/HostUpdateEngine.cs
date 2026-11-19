@@ -74,6 +74,7 @@ internal sealed class HostUpdateEngine
     private readonly bool recovery;
     private HostSelection? selection;
     private readonly CancellationTokenSource cancel = new();
+    private readonly TaskCompletionSource quiescence = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int started;
     private bool mutationPossible;
     private bool markerWritten;
@@ -85,6 +86,7 @@ internal sealed class HostUpdateEngine
     internal bool BytesVerified { get; private set; }
     internal HostBindingFault BindingFault { get; private set; }
     internal bool AttemptStarted => Volatile.Read(ref started) != 0;
+    internal Task WhenQuiescent => AttemptStarted ? quiescence.Task : Task.CompletedTask;
     // Set when a stop after the durable marker but before any command withdrew (or could not
     // withdraw) the marker. Neither value ever applies once a command may have been submitted.
     internal bool UncertaintyMarkerReleased { get; private set; }
@@ -228,7 +230,12 @@ internal sealed class HostUpdateEngine
         {
             if (confirmation is null || !ReferenceEquals(confirmation.Owner, confirmationOwner) ||
                 Interlocked.CompareExchange(ref started, 1, 0) != 0) return;
-            if (Interlocked.Exchange(ref confirmation.Consumed, 1) != 0) { Stop("confirmation-consumed"); return; }
+            if (Interlocked.Exchange(ref confirmation.Consumed, 1) != 0)
+            {
+                Stop("confirmation-consumed");
+                quiescence.TrySetResult();
+                return;
+            }
         }
         IDisposable? lease = null;
         Task? pending = null;
@@ -309,11 +316,16 @@ internal sealed class HostUpdateEngine
             if (pending is { IsCompleted: false } && lease is not null)
             {
                 var retained = lease;
-                _ = pending.ContinueWith(task => { _ = task.Exception; retained.Dispose(); },
+                _ = pending.ContinueWith(task => { _ = task.Exception; ReleaseAfterQuiescence(retained); },
                     CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-                lease = null;
             }
-            lease?.Dispose();
+            else ReleaseAfterQuiescence(lease);
         }
+    }
+
+    private void ReleaseAfterQuiescence(IDisposable? lease)
+    {
+        try { lease?.Dispose(); }
+        finally { quiescence.TrySetResult(); }
     }
 }

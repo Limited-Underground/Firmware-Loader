@@ -32,6 +32,7 @@ internal sealed class EsptoolHostUpdateAdapter : IBenchBoard
 
     private readonly IFlashHelperRunner runner;
     private readonly EsptoolAdapterLimits limits;
+    private readonly string? protectedImageDirectory;
     private readonly object gate = new();
     private HostSelection? selection;
     private ulong generation;
@@ -41,9 +42,10 @@ internal sealed class EsptoolHostUpdateAdapter : IBenchBoard
     private string? writtenSha256;
     private bool protectedMatched;
 
-    internal EsptoolHostUpdateAdapter(IFlashHelperRunner runner, EsptoolAdapterLimits limits)
+    internal EsptoolHostUpdateAdapter(IFlashHelperRunner runner, EsptoolAdapterLimits limits, string? protectedImageDirectory = null)
     {
         this.runner = runner; this.limits = limits;
+        this.protectedImageDirectory = protectedImageDirectory;
     }
 
     public HostSelection? CurrentSelection { get { lock (gate) return selection; } }
@@ -96,12 +98,21 @@ internal sealed class EsptoolHostUpdateAdapter : IBenchBoard
         var layout = SpansFor(offset, image.Length);
         var original = await Digests(board, layout, cancellation).ConfigureAwait(false);
         lock (gate) { spans = layout; before = original; writtenIndex = Array.FindIndex(layout, s => s.Offset == offset); writtenSha256 = null; }
-        string folder = Path.Combine(Path.GetTempPath(), "lu-loader-flash");
-        Directory.CreateDirectory(folder);
+        string folder = protectedImageDirectory ?? Path.Combine(Path.GetTempPath(), "lu-loader-flash");
+        if (protectedImageDirectory is null) Directory.CreateDirectory(folder);
         string file = Path.Combine(folder, Guid.NewGuid().ToString("N") + ".bin");
-        await File.WriteAllBytesAsync(file, image, CancellationToken.None).ConfigureAwait(false);
+        bool created = false;
         try
         {
+            using (var stage = new FileStream(file, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                created = true;
+                await stage.WriteAsync(image, CancellationToken.None).ConfigureAwait(false);
+                stage.Flush(true);
+            }
+            // The worker supplies its pinned private directory. Hold the staged bytes open
+            // through the helper invocation so later opens cannot modify or replace them.
+            using var pin = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
             var result = await Run(new[] { "write", "--port", board.Port, "--offset", "0x" + offset.ToString("X"), "--file", file },
                 limits.Write, cancellation).ConfigureAwait(false);
             if (result.GetProperty("md5").GetString() != HostRegionCheck.Md5Hex(image) ||
@@ -109,7 +120,7 @@ internal sealed class EsptoolHostUpdateAdapter : IBenchBoard
                 throw new InvalidDataException("write check");
             lock (gate) writtenSha256 = HostReleaseAdmission.Digest(image);
         }
-        finally { try { File.Delete(file); } catch (Exception) { } }
+        finally { if (created) { try { File.Delete(file); } catch (Exception) { } } }
     }
 
     public async Task<HostRegionCheck> ReadbackAsync(HostSelection expected, uint offset, int length, CancellationToken cancellation)
@@ -200,7 +211,8 @@ internal static class BenchFlash
     // SHA-256 of tools/flash-helper/lu_flash_helper.py, the copy shipped next to the Loader.
     // A test checks it equals the committed file; the runner refuses any other helper.
     internal const string HelperSha256 = "26094DB746986CC172A2BB12DB88FA17381BB29A324767568739D5A441DB37EF";
-    internal static IBenchBoard CreateBoard(IFlashHelperRunner runner) => new EsptoolHostUpdateAdapter(runner, EsptoolAdapterLimits.Bench);
+    internal static IBenchBoard CreateBoard(IFlashHelperRunner runner, string? protectedImageDirectory = null) =>
+        new EsptoolHostUpdateAdapter(runner, EsptoolAdapterLimits.Bench, protectedImageDirectory);
 
     internal const string AdapterName = EsptoolHostUpdateAdapter.AdapterName;
     internal const string Target = EsptoolHostUpdateAdapter.Target;

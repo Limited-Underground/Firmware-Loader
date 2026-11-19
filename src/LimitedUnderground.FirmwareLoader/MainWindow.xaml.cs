@@ -10,6 +10,7 @@ public partial class MainWindow : Window
     private readonly LoaderSessionController session = new(
         LoaderProductionProviders.Factories,
         LoaderProductionProviders.SignerTrustPolicies);
+    private CancellationTokenSource? dailyCancellation;
 
     public MainWindow()
     {
@@ -20,6 +21,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs eventArgs)
     {
+        dailyCancellation?.Cancel();
         ClearInspection();
         session.Dispose();
         base.OnClosed(eventArgs);
@@ -152,7 +154,7 @@ public partial class MainWindow : Window
         SelectedProductName.Text = snapshot.Product.DisplayName;
         SelectedProductDescription.Text = snapshot.Product.Description;
         SelectedProductStatus.Text = snapshot.OfflineBundleInspectionAvailable
-            ? "For the board A qualification test, connect only your assigned board and choose Install signed qualification release. Administrator rights are required for this build."
+            ? "For qualification, connect only your assigned MeshTrail board and choose Install signed qualification release. Administrator rights are required for legacy board A sessions."
             : snapshot.Status;
         ContinueButton.IsEnabled = snapshot.OfflineBundleInspectionAvailable;
         InstallReleaseButton.IsEnabled = snapshot.OfflineBundleInspectionAvailable;
@@ -165,9 +167,9 @@ public partial class MainWindow : Window
         _ = sender;
         _ = eventArgs;
         ClearInspection();
-        if (!MachineRecoveryStorePolicy.IsElevatedAdministrator())
+        if (!MachineRecoveryStorePolicy.IsElevatedAdministrator() || MachineRecoveryStorePolicy.HasDailyState || DailyLoaderClient.HasRegisteredTask())
         {
-            ShowInstallMessage("Run the Loader as administrator", "The current qualification release still needs administrator rights to protect recovery records. Close the Loader, right-click it and choose Run as administrator.");
+            await RunDailyQualificationAsync();
             return;
         }
         var runtime = PackagedFlashRuntime.OpenInstalled();
@@ -214,6 +216,72 @@ public partial class MainWindow : Window
         finally
         {
             InstallReleaseButton.IsEnabled = session.Snapshot.OfflineBundleInspectionAvailable;
+        }
+    }
+
+    private async Task RunDailyQualificationAsync()
+    {
+        var dialog = new OpenFolderDialog { Title = "Choose the signed release folder", Multiselect = false };
+        if (dialog.ShowDialog(this) != true) return;
+        var files = QualificationReleaseFiles.TryRead(dialog.FolderName);
+        if (files is null)
+        {
+            ShowInstallMessage("Release folder not usable", "Choose the assigned signed release folder and keep the four release files together.");
+            return;
+        }
+
+        using var lifetime = new CancellationTokenSource();
+        dailyCancellation = lifetime;
+        var cancellation = lifetime.Token;
+        InstallReleaseButton.IsEnabled = ContinueButton.IsEnabled = BackButton.IsEnabled = false;
+        SafetyFooter.Text = "QUALIFICATION INSTALL — approved MeshTrail boards only. A write requires your confirmation.";
+        ShowInstallMessage("Checking the release and board", "Connect only the assigned board and keep it plugged in.");
+        bool confirmationSent = false;
+        try
+        {
+            await using var worker = await DailyLoaderClient.ConnectAsync(cancellation);
+            if (worker is null)
+            {
+                ShowInstallMessage("Daily qualification unavailable", "Ask your test coordinator to check the setup and the Windows account assigned to this PC.");
+                return;
+            }
+            var ready = await worker.PrepareAsync(files, cancellation);
+            ShowInstallMessage(ready.Heading, ready.Detail);
+            if (!ready.CanChooseBoard || ready.BoardLabel is null || MessageBox.Show(this,
+                $"Choose {ready.BoardLabel} for this attempt. Make sure only the assigned board is connected.",
+                "Choose the board", MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) != MessageBoxResult.OK)
+                return;
+
+            var selected = await worker.SelectBoardAsync(cancellation);
+            ShowInstallMessage(selected.Heading, selected.Detail);
+            if (!selected.CanConfirm || MessageBox.Show(this,
+                selected.ReleaseSummary + "\n\nConfirm this board and signed release for one attempt.",
+                "Confirm firmware update", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
+                return;
+
+            ShowInstallMessage("Updating the assigned board", "Keep the cable connected while the Loader writes, verifies the firmware and checks startup.");
+            confirmationSent = true;
+            var result = await worker.ConfirmAndRunAsync(cancellation);
+            ShowInstallMessage(result.Heading, string.Join("\n", new[] { result.ReleaseSummary, result.Detail }
+                .Where(text => !string.IsNullOrWhiteSpace(text))));
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException or
+            TimeoutException or OperationCanceledException or System.Text.Json.JsonException)
+        {
+            ShowInstallMessage(confirmationSent ? "Outcome unknown" : "Daily qualification unavailable",
+                confirmationSent
+                    ? "Keep the board connected and contact your test coordinator before retrying or restoring."
+                    : "Ask your test coordinator to check the approved MeshTrail setup.");
+        }
+        finally
+        {
+            dailyCancellation = null;
+            if (!cancellation.IsCancellationRequested)
+            {
+                BackButton.IsEnabled = true;
+                InstallReleaseButton.IsEnabled = ContinueButton.IsEnabled = session.Snapshot.OfflineBundleInspectionAvailable;
+            }
         }
     }
 

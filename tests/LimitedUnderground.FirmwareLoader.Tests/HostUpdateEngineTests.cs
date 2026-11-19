@@ -186,8 +186,11 @@ internal static class HostUpdateEngineTests
     {
         using var f = new Fixture(select: false); var e = f.NewEngine(profile: f.Profile with { WriteMilliseconds = 20 }); Require(e.Select(f.Selection), "selected");
         var pending = new TaskCompletionSource(); f.Adapter.Write = () => pending.Task; Run(e);
-        Require(e.State == HostUpdateState.OutcomeUnknown && f.Lease.Held, "timeout cannot release running transport"); pending.SetResult();
-        Require(SpinWait.SpinUntil(() => !f.Lease.Held, 1000) && e.State == HostUpdateState.OutcomeUnknown, "late completion release only");
+        Require(e.State == HostUpdateState.OutcomeUnknown && f.Lease.Held && !e.WhenQuiescent.IsCompleted,
+            "timeout cannot release the running transport or signal quiescence");
+        pending.SetResult();
+        e.WhenQuiescent.WaitAsync(TimeSpan.FromSeconds(1)).GetAwaiter().GetResult();
+        Require(!f.Lease.Held && e.State == HostUpdateState.OutcomeUnknown, "late completion signals quiescence after release only");
     }
     private static void JournalFailures()
     {

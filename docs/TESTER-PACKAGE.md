@@ -6,7 +6,7 @@ L11 is “Tester package: installer and instructions.” The existing release pl
 
 | Package path | Approved source |
 | --- | --- |
-| `installer/FirmwareLoaderSetup.exe` | Exact installer handoff, with its publisher and SHA-256 confirmed through the release route. The installer verifies the staged payload, installs it into an administrator-managed directory, and calls L9’s one-time setup. This task does not build or sign the final Windows installer. |
+| `installer/FirmwareLoaderSetup.exe` | Exact installer handoff, with its publisher and SHA-256 confirmed through the release route. The installer verifies the staged payload, installs it into an administrator-managed directory, and calls L9’s one-time setup with the owner-approved assignment. The package assembler consumes the exact installer handoff. |
 | `app/` | Exact publish output with the L9 pins embedded, the packaged runtime and the existing helper. Preserve the selected .NET 10 Desktop prerequisite. |
 | `metadata/runtime-files.json` | Exact L9 stage receipt used to publish that app. Runtime files must agree with this receipt and the package lock. |
 | `firmware/install/` and `firmware/restore/` | Matching local release folders. Only `release.json`, `raw.bin`, `padded.bin` and each original `release.sig` enter a qualification candidate. Board-specific authorization and signature verification remain the Loader’s responsibility. |
@@ -14,6 +14,29 @@ L11 is “Tester package: installer and instructions.” The existing release pl
 | `README.md`, `LICENSE`, `package-manifest.json` | Current [tester guide](../tools/tester-package/README.md), repository license and exact assembled-file inventory. |
 
 A fixture uses `installer/UNSIGNED-SETUP-FIXTURE.txt` in place of the installer and omits both signatures. Its first README line warns against installation or flashing. The assembler excludes private release-builder extras, including original-image and summary files. A restore image enters through a separately approved release folder and is checked against the install release’s recovery digest.
+
+## One-time setup for daily use
+
+D-132 requires the installer to enroll a private assignment supplied by an administrator. Keep this local JSON file outside the tester package and source control, under administrator ownership and writable only by trusted administrators. The file names one Windows user and contains the exact install and restore release pair for each approved board.
+
+| Field | Required value |
+| --- | --- |
+| `schema` | Integer `1`. |
+| `operatorSid` | The stable SID of the one named Windows user. Resolve the account by name before submitting its SID. |
+| `boards` | A nonempty array of up to 32 owner-approved assignments. |
+| `fingerprint` | The existing D-065 board fingerprint in the Loader’s SHA-256 format. |
+| `installManifestSha256` | SHA-256 of the exact signed install release’s original `release.json` bytes. |
+| `restoreManifestSha256` | SHA-256 of that board’s separately approved signed restore `release.json` bytes. |
+
+The three digest fields are uppercase, 64-character hexadecimal SHA-256 values. Zero digests, duplicate board fingerprints and reused release digests are refused. A qualification package still carries its matched install and restore pair. An assignment can authorize multiple packages for their own boards. The worker checks the connected board and the supplied manifest against the same assignment before proceeding through the existing signature, state, confirmation and verification checks.
+
+From the approved installer’s elevated process, point `-InstalledLoader` at the installed executable in its administrator-managed program directory and `-AssignmentFile` at the approved local input. The setup entrypoint enrolls or verifies the protected recovery store and registers the fixed on-demand task `LimitedUnderground.FirmwareLoader.DailyWorker`. The named operator receives permission to read and run that task. Trusted Windows principals own the task configuration and protected state. The provisioning entrypoint is [Install-LoaderDailyWorker.ps1](../tools/Install-LoaderDailyWorker.ps1).
+
+Run setup again with the same assignment to preserve the journal, board bindings and admission clock. An interrupted provisioning run must resume with the exact staged assignment. A replacement board list requires an explicit administrator call with `-ReplaceAssignment` and the same operator. Missing, malformed or conflicting assignments stop setup. `-Uninstall` uses `-InstalledLoader` to verify and remove the exact task and retains protected state for reinstall or a later owner decision.
+
+Existing legacy board A assignment data stops daily setup. Agree on a migration that preserves the prior board pin, journal and admission clock before moving that PC to daily operation.
+
+Clean-Windows acceptance must exercise first-day use by the assigned account, another launch after reboot, refusal of a second account, same-input setup, explicit board-list replacement and task removal. Install and restore on a connected board require separately authorized device sessions.
 
 ## Assemble and verify
 
