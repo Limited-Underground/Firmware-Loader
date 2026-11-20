@@ -6,7 +6,7 @@ L11 is “Tester package: installer and instructions.” The existing release pl
 
 | Package path | Approved source |
 | --- | --- |
-| `installer/FirmwareLoaderSetup.exe` | Exact installer handoff, with its publisher and SHA-256 confirmed through the release route. The installer verifies the staged payload, installs it into an administrator-managed directory, and calls L9’s one-time setup with the owner-approved assignment. The package assembler consumes the exact installer handoff. |
+| `installer/FirmwareLoaderSetup.exe` | The reviewed installer for this exact package, signed by the owner for the D-141 test. Record the signed executable's size and SHA-256 in the input lock. |
 | `app/` | Exact publish output with the L9 pins embedded, the packaged runtime and the existing helper. Preserve the selected .NET 10 Desktop prerequisite. |
 | `metadata/runtime-files.json` | Exact L9 stage receipt used to publish that app. Runtime files must agree with this receipt and the package lock. |
 | `firmware/install/` and `firmware/restore/` | Matching local release folders. Only `release.json`, `raw.bin`, `padded.bin` and each original `release.sig` enter a qualification candidate. Board-specific authorization and signature verification remain the Loader’s responsibility. |
@@ -30,13 +30,31 @@ D-132 requires the installer to enroll a private assignment supplied by an admin
 
 The three digest fields are uppercase, 64-character hexadecimal SHA-256 values. Zero digests, duplicate board fingerprints and reused release digests are refused. A qualification package still carries its matched install and restore pair. An assignment can authorize multiple packages for their own boards. The worker checks the connected board and the supplied manifest against the same assignment before proceeding through the existing signature, state, confirmation and verification checks.
 
-From the approved installer’s elevated process, point `-InstalledLoader` at the installed executable in its administrator-managed program directory and `-AssignmentFile` at the approved local input. The setup entrypoint enrolls or verifies the protected recovery store and registers the fixed on-demand task `LimitedUnderground.FirmwareLoader.DailyWorker`. The named operator receives permission to read and run that task. Trusted Windows principals own the task configuration and protected state. The provisioning entrypoint is [Install-LoaderDailyWorker.ps1](../tools/Install-LoaderDailyWorker.ps1).
+The installer passes its fixed installed executable to `-InstalledLoader` and the private input to `-AssignmentFile`. The setup entrypoint enrolls or verifies the protected recovery store and registers the fixed on-demand task `LimitedUnderground.FirmwareLoader.DailyWorker`. The named operator receives permission to read and run that task. Trusted Windows principals own the task configuration and protected state. The provisioning entrypoint is [Install-LoaderDailyWorker.ps1](../tools/Install-LoaderDailyWorker.ps1).
 
-Run setup again with the same assignment to preserve the journal, board bindings and admission clock. An interrupted provisioning run must resume with the exact staged assignment. A replacement board list requires an explicit administrator call with `-ReplaceAssignment` and the same operator. Missing, malformed or conflicting assignments stop setup. `-Uninstall` uses `-InstalledLoader` to verify and remove the exact task and retains protected state for reinstall or a later owner decision.
+The setup code refuses missing, malformed or conflicting assignments. Resume an interrupted provisioning run with the exact staged assignment. The retained recovery journal, board bindings and admission clock remain under the existing D-132 protection.
 
 Existing legacy board A assignment data stops daily setup. Agree on a migration that preserves the prior board pin, journal and admission clock before moving that PC to daily operation.
 
 Clean-Windows acceptance must exercise first-day use by the assigned account, another launch after reboot, refusal of a second account, same-input setup, explicit board-list replacement and task removal. Install and restore on a connected board require separately authorized device sessions.
+
+## Run the reviewed installer
+
+Use the reviewed qualification package on the designated clean Windows 11 x64 test computer. The installer and Loader use the x64 .NET 10 Windows Desktop Runtime. The one-time setup uses PowerShell 7.5 or later from its protected Program Files location. Check these prerequisites before the acceptance session.
+
+D-141 uses an owner-created test certificate trusted only on the clean test computer. The build produces an unsigned `FirmwareLoaderSetup.exe`. The owner signs a separate reviewed copy using [Sign-LoaderTestInstaller.ps1](../tools/Sign-LoaderTestInstaller.ps1), pins the **signed** file's SHA-256 and size in the input lock, and reassembles the qualification package. Verify the installer signature and expected certificate thumbprint on the test computer before running it. Obtain the approved package manifest SHA-256 independently of the package.
+
+Run from PowerShell 7 as an administrator. The installer uses the existing D-132 setup entrypoint after verifying the package and installing its app files.
+
+~~~powershell
+$setup = Join-Path $package 'installer\FirmwareLoaderSetup.exe'
+& $setup --package $package --manifest-sha256 $approvedPackageHash --assignment-file $privateAssignment
+if ($LASTEXITCODE -ne 0) { throw 'Firmware Loader setup stopped.' }
+~~~
+
+Setup verifies the package manifest digest and staged payload before copying the app to `Program Files\LimitedUnderground.FirmwareLoader`. It delegates the private assignment, task and recovery-store rules to the existing provisioning scripts. The installer performs PC setup without starting a firmware operation.
+
+Repeat the same command with the same package and assignment to preserve state. For an authorized board-list replacement with the same operator, add `--replace-assignment`. For task removal, invoke the reviewed installer with `--uninstall` from PowerShell as an administrator. Protected records remain for the next setup or an owner-approved retirement.
 
 ## Assemble and verify
 
