@@ -6,9 +6,12 @@ Qualification is limited to the boards and signed releases approved for this PC.
 
 ## Install and open
 
-1. Use the Windows 11 Pro 25H2 x64 PC agreed with your coordinator. Keep the package folders together. The coordinator must supply the expected package identity and installer publisher.
-2. Open **installer/FirmwareLoaderSetup.exe**. Check that Windows shows the expected publisher before approving setup. If the installer is missing, unsigned or from a different publisher, stop and request a verified package.
-3. Follow setup's instructions. An administrator approves installation and prepares recovery storage. If Windows reports a missing .NET 10 Desktop Runtime, or setup cannot finish, contact the coordinator for the approved prerequisite and installation help.
+1. Use the Windows 11 Pro 25H2 x64 PC agreed with your coordinator. Keep the package folders together. Give your administrator the approved package manifest SHA-256 received separately from the package and the approved private assignment file.
+2. Ask the administrator to verify the installer SHA-256, Authenticode status and expected signer thumbprint before setup. For the first clean-Windows acceptance, the owner trusts the D-141 public test certificate only on that computer. If verification fails, stop and ask for a verified package.
+3. The administrator opens PowerShell 7 as administrator and runs the approved setup command with the package folder, independent manifest SHA-256 and private assignment file. The setup requires the x64 .NET 10 Windows Desktop Runtime and PowerShell 7.5 or later on the test PC. If setup reports a missing prerequisite or refuses the package or assignment, give the message to your coordinator.
+   ```powershell
+   & '<package>\installer\FirmwareLoaderSetup.exe' --package '<package folder>' --manifest-sha256 '<approved manifest SHA-256>' --assignment-file '<private assignment file>'
+   ```
 4. Sign in to the Windows account your coordinator assigned, then open **Limited Underground Firmware Loader** normally. If you see **Daily qualification unavailable**, ask the coordinator to check this PC's setup and assigned account.
 
 ## Choose the board and firmware

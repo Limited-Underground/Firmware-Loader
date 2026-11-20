@@ -2,7 +2,9 @@
 [CmdletBinding(DefaultParameterSetName = 'EvidenceRoot', PositionalBinding = $false)]
 param(
     [Parameter(ParameterSetName = 'EvidenceRoot')][ValidateNotNullOrEmpty()][string] $EvidenceRoot,
-    [Parameter(Mandatory, Position = 0, ParameterSetName = 'OutputDirectory')][string] $OutputDirectory
+    [Parameter(Mandatory, Position = 0, ParameterSetName = 'OutputDirectory')][string] $OutputDirectory,
+    [string] $DryRunInstaller,
+    [string] $DryRunInstallerSha256
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,6 +22,22 @@ if ($PSCmdlet.ParameterSetName -ceq 'OutputDirectory') {
 $builder = Join-Path $PSScriptRoot 'New-LoaderTesterPackage.ps1'
 $fixtureRoot = Join-Path $root 'synthetic-input'
 $paths = [ordered]@{}
+
+if ([bool]$DryRunInstaller -ne [bool]$DryRunInstallerSha256) {
+    throw 'Supply the unsigned setup executable and its exact SHA-256 together.'
+}
+if ($DryRunInstaller) {
+    if (![IO.Path]::IsPathFullyQualified($DryRunInstaller) -or
+        [IO.Path]::GetFileName($DryRunInstaller) -cne 'FirmwareLoaderSetup.exe' -or
+        $DryRunInstallerSha256 -cnotmatch '\A[0-9A-F]{64}\z') {
+        throw 'Supply the full path and uppercase SHA-256 of FirmwareLoaderSetup.exe.'
+    }
+    $exe = Get-Item -LiteralPath $DryRunInstaller
+    if ($exe.PSIsContainer -or ($exe.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
+        (Get-FileHash -LiteralPath $DryRunInstaller).Hash -cne $DryRunInstallerSha256) {
+        throw 'The unsigned setup executable did not match the supplied SHA-256.'
+    }
+}
 
 function Write-Bytes([string]$Path, [byte[]]$Bytes) {
     [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($Path)) | Out-Null
@@ -197,3 +215,37 @@ Refuse 'an unlisted packaged file' {
 } '*unexpected file*'
 Move-Item -LiteralPath $unexpected -Destination (Join-Path $root 'held-extra-fixture')
 & $builder -VerifyDirectory $out -ManifestSha256 $result.manifestSha256
+
+if ($DryRunInstaller) {
+    # Both candidate release files are inert. This verifies layout and exact file bytes only.
+    $paths.Remove('app/../escape.txt')
+    $paths.Remove('installer/UNSIGNED-SETUP-FIXTURE.txt')
+    $paths['installer/FirmwareLoaderSetup.exe'] = $DryRunInstaller
+    $sourceArgs.Installer = $DryRunInstaller
+    foreach ($side in 'install','restore') {
+        $release = $paths["firmware/$side/release.json"]
+        $manifest = [IO.File]::ReadAllText($release) | ConvertFrom-Json -AsHashtable
+        $manifest['publicKeyFingerprint'] = 'F' * 64
+        Write-Text $release ($manifest | ConvertTo-Json -Compress)
+        $signature = Join-Path $fixtureRoot "firmware/$side/release.sig"
+        $bytes = [byte[]]::new(384)
+        [Array]::Fill[byte]($bytes, 165)
+        Write-Bytes $signature $bytes
+        $paths["firmware/$side/release.sig"] = $signature
+    }
+    Write-Text $paths['notices/NOTICE.txt'] 'Qualification layout dry run. Inert app and firmware. Do not install or flash.'
+    $candidateLock = Save-Lock 'qualification-candidate'
+    $candidatePath = Join-Path $root 'inert-qualification-layout-do-not-install'
+    $assembled = & $builder @sourceArgs -InputLockSha256 $candidateLock -OutputDirectory $candidatePath
+    $verified = & $builder -VerifyDirectory $candidatePath -ManifestSha256 $assembled.manifestSha256
+    Assert ($verified.mode -ceq 'qualification-candidate' -and $verified.files -eq $assembled.files) 'The qualification dry-run layout did not verify.'
+    Assert ((Pin (Join-Path $candidatePath 'installer/FirmwareLoaderSetup.exe')).sha256 -ceq $DryRunInstallerSha256) 'Installer bytes changed during staging.'
+    [pscustomobject]@{
+        layout = $verified.mode
+        disposition = 'inert dry run'
+        files = $verified.files
+        manifestSha256 = $assembled.manifestSha256
+        installerSha256 = $DryRunInstallerSha256
+        folder = $candidatePath
+    }
+}
