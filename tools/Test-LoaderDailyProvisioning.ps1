@@ -55,6 +55,25 @@ function New-State {
 }
 
 $cases = [ordered]@{
+    'stock ProgramData permissions on an ancestor' = {
+        # 0x116 is the stock Users write ACE. 0x110 isolates the two attribute rights.
+        $acl = [Security.AccessControl.DirectorySecurity]::new()
+        $acl.SetSecurityDescriptorSddlForm('O:SYG:SYD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICIIO;FA;;;CO)(A;OICI;FRFX;;;BU)(A;CI;0x116;;;BU)')
+        Assert-LoaderSetupPathAcl -Acl $acl -AncestorOnly
+        Refuse { Assert-LoaderSetupPathAcl -Acl $acl } '*must be protected from ordinary-user changes.'
+        $acl.SetSecurityDescriptorSddlForm('O:SYG:SYD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;;0x110;;;BU)')
+        Assert-LoaderSetupPathAcl -Acl $acl -AncestorOnly
+        Refuse { Assert-LoaderSetupPathAcl -Acl $acl } '*must be protected from ordinary-user changes.'
+    }
+    'unsafe ancestor permission or owner' = {
+        foreach ($mask in '0x10000','0x40','0x40000','0x80000','GW','GA') {
+            $acl = [Security.AccessControl.DirectorySecurity]::new()
+            $acl.SetSecurityDescriptorSddlForm("O:SYG:SYD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;;$mask;;;BU)")
+            Refuse { Assert-LoaderSetupPathAcl -Acl $acl -AncestorOnly } '*must be protected from ordinary-user changes.'
+        }
+        $acl.SetSecurityDescriptorSddlForm('O:BUG:SYD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)')
+        Refuse { Assert-LoaderSetupPathAcl -Acl $acl -AncestorOnly } 'Use an administrator-managed Firmware Loader setup path.'
+    }
     'missing list' = { Refuse { Normalize ('{"schema":1,"operatorSid":"' + $operator + '"}') } 'The board assignment*' }
     'empty list' = { Refuse { Normalize (Assignment '') } 'The board assignment*' }
     'malformed fingerprint' = {

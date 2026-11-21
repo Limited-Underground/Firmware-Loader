@@ -137,4 +137,23 @@ function Invoke-LoaderDailyProvisioning {
     return 'Daily worker setup is ready.'
 }
 
-Export-ModuleMember -Function ConvertTo-LoaderDailyAssignment, Invoke-LoaderDailyProvisioning
+function Assert-LoaderSetupPathAcl([Security.AccessControl.FileSystemSecurity] $Acl, [switch] $AncestorOnly) {
+    $raw = [Security.AccessControl.RawSecurityDescriptor]::new($Acl.GetSecurityDescriptorBinaryForm(),0)
+    if ($null -eq $raw.DiscretionaryAcl) { throw 'The Firmware Loader setup path has no protective access list.' }
+    $sidType = [Security.Principal.SecurityIdentifier]
+    $trustedOwners = 'S-1-5-32-544','S-1-5-18','S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
+    if ($Acl.GetOwner($sidType).Value -cnotin $trustedOwners) {
+        throw 'Use an administrator-managed Firmware Loader setup path.'
+    }
+    $rights = [Security.AccessControl.FileSystemRights]'Delete,DeleteSubdirectoriesAndFiles,ChangePermissions,TakeOwnership'
+    if (!$AncestorOnly) { $rights = $rights -bor [Security.AccessControl.FileSystemRights]::Write }
+    foreach ($ace in $Acl.GetAccessRules($true,$true,$sidType)) {
+        if ($ace.AccessControlType -eq 'Allow' -and $ace.IdentityReference.Value -cnotin $trustedOwners -and
+            !(($ace.PropagationFlags -band [Security.AccessControl.PropagationFlags]::InheritOnly)) -and
+            (([int]$ace.FileSystemRights -band [int]$rights) -or ([int]$ace.FileSystemRights -band 0x50000000))) {
+            throw 'Firmware Loader setup files and the installed worker must be protected from ordinary-user changes.'
+        }
+    }
+}
+
+Export-ModuleMember -Function ConvertTo-LoaderDailyAssignment, Invoke-LoaderDailyProvisioning, Assert-LoaderSetupPathAcl
