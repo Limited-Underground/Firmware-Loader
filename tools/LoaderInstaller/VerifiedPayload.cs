@@ -8,11 +8,13 @@ internal sealed class VerifiedPayload : IDisposable
 {
     private const string ManifestName = "package-manifest.json";
     private const string AppPrefix = "app/";
+    private const string RuntimePrefix = AppPrefix + "flash-runtime/";
     private const int MaximumFiles = 16384;
     private const int MaximumEntries = 32768;
     private const int MaximumManifestBytes = 4 * 1024 * 1024;
     private const long MaximumFileBytes = 512L * 1024 * 1024;
     private const string LoaderName = "LimitedUnderground.FirmwareLoader";
+    private static readonly string EmptyFileDigest = Convert.ToHexString(SHA256.HashData(Array.Empty<byte>()));
     private static readonly string[] Required =
     [
         "README.md", "LICENSE", "installer/FirmwareLoaderSetup.exe", "metadata/runtime-files.json",
@@ -91,7 +93,9 @@ internal sealed class VerifiedPayload : IDisposable
             var size = record.Value.GetProperty("size");
             string? hash = record.Value.GetProperty("sha256").GetString();
             if (size.ValueKind != JsonValueKind.Number || !size.TryGetInt64(out long length) ||
-                length is < 1 or > MaximumFileBytes || !IsDigest(hash))
+                length is < 0 or > MaximumFileBytes || !IsDigest(hash) ||
+                (length == 0 && (hash != EmptyFileDigest ||
+                    !record.Name.StartsWith(RuntimePrefix, StringComparison.Ordinal) || Required.Contains(record.Name))))
                 throw new InstallerRefusalException("A package manifest file entry has an invalid size or SHA-256.");
             records.Add(record.Name, (length, hash!));
         }

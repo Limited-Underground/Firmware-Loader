@@ -72,6 +72,12 @@ foreach ($leaf in 'python.exe','python314._pth','python314.zip','python314.dll',
     Fixture $name "Synthetic runtime file: $leaf"
     $runtime[$leaf] = (Pin $paths[$name]).sha256
 }
+$emptyRuntimeLeaf = 'packages/serial/tools/__init__.py'
+$emptyRuntimeName = "app/flash-runtime/$emptyRuntimeLeaf"
+Fixture $emptyRuntimeName ''
+$emptyRuntimeSha256 = 'E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855'
+$runtime[$emptyRuntimeLeaf] = $emptyRuntimeSha256
+
 Fixture 'metadata/runtime-files.json' (@{ format = 'LU-FLASH-RUNTIME-FILES-V1'; files = $runtime } | ConvertTo-Json -Depth 5)
 Fixture 'installer/UNSIGNED-SETUP-FIXTURE.txt' 'Synthetic installer layout marker. There is no installer in this fixture.'
 Fixture 'notices/NOTICE.txt' 'Synthetic notices. The approved package needs its exact third-party notices and source obligations.'
@@ -130,6 +136,10 @@ $out = Join-Path $root 'unsigned-package'
 $result = & $builder @sourceArgs -InputLockSha256 $lockHash -OutputDirectory $out
 $valid = & $builder -VerifyDirectory $out -ManifestSha256 $result.manifestSha256
 Assert ($valid.mode -ceq 'fixture' -and $valid.files -eq $result.files) 'The fixture did not verify.'
+$emptyPackaged = Pin (Join-Path $out $emptyRuntimeName)
+Assert ($emptyPackaged.size -eq 0 -and $emptyPackaged.sha256 -ceq $emptyRuntimeSha256) 'The pinned empty runtime file changed during packaging.'
+'PASS: pinned empty runtime file assembled and verified.'
+
 Assert ((Get-Content -LiteralPath (Join-Path $out 'README.md') -TotalCount 1) -like '*do not install or flash*') 'Fixture warning absent.'
 $guide = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'tester-package/README.md'))
 $packagedGuide = [IO.File]::ReadAllText((Join-Path $out 'README.md'))
@@ -165,6 +175,24 @@ Refuse 'a changed runtime input even with an updated package lock' {
     & $builder @sourceArgs -InputLockSha256 $changedLock -OutputDirectory (Join-Path $root 'bad-runtime-pin')
 } '*L9 runtime pin does not match*'
 Assert (!(Test-Path -LiteralPath (Join-Path $root 'bad-runtime-pin/package-manifest.json'))) 'Rejected stage has a completion record.'
+Write-Bytes $runtimeFile $original
+
+$null = Save-Lock
+$wrongEmptyLock = Join-Path $root 'wrong-empty-hash-lock.json'
+$wrongEmpty = [IO.File]::ReadAllText($lock) | ConvertFrom-Json -AsHashtable
+$wrongEmpty['files'][$emptyRuntimeName]['sha256'] = 'A' * 64
+Write-Text $wrongEmptyLock ($wrongEmpty | ConvertTo-Json -Depth 6)
+$wrongEmptyArgs = $sourceArgs.Clone()
+$wrongEmptyArgs.InputLock = $wrongEmptyLock
+Refuse 'a zero-byte runtime record with a nonempty digest' {
+    & $builder @wrongEmptyArgs -InputLockSha256 (Pin $wrongEmptyLock).sha256 -OutputDirectory (Join-Path $root 'bad-empty-hash')
+} '*exact byte count and uppercase SHA-256*'
+
+Write-Bytes $runtimeFile ([byte[]]::new(0))
+$emptyRequiredLock = Save-Lock
+Refuse 'a zero-byte required Python executable' {
+    & $builder @sourceArgs -InputLockSha256 $emptyRequiredLock -OutputDirectory (Join-Path $root 'empty-required-runtime')
+} '*exact byte count and uppercase SHA-256*'
 Write-Bytes $runtimeFile $original
 
 $restorePath = $paths['firmware/restore/release.json']
