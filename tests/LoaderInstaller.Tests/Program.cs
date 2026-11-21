@@ -14,6 +14,10 @@ var cases = new (string Name, Action<PackageFixture> Run)[]
     ("missing payload file refused before changes", MissingFile),
     ("altered same-size payload refused before changes", AlteredFile),
     ("unlisted payload file refused before changes", ExtraFile),
+    ("pinned empty runtime file stages as empty", EmptyRuntimeFile),
+    ("empty runtime file with the wrong digest is refused", WrongEmptyRuntimeDigest),
+    ("empty required runtime file is refused", EmptyRequiredRuntimeFile),
+    ("empty non-runtime file is refused", EmptyNonRuntimeFile),
     ("wrong outer manifest digest refused before changes", WrongDigest),
     ("unsafe payload record refused before changes", UnsafePath),
     ("missing assignment stops setup with guidance", MissingAssignment),
@@ -91,6 +95,37 @@ static void ExtraFile(PackageFixture fixture)
     var host = new FakeInstallerHost();
     var options = fixture.Options(extra: true);
     Refused(InstallerWorkflow.Run(options, host), "package");
+    Untouched(host);
+}
+
+static void EmptyRuntimeFile(PackageFixture fixture)
+{
+    var host = new FakeInstallerHost();
+    var result = InstallerWorkflow.Run(fixture.Options(empty: PackageFixture.EmptyRuntime), host);
+    Require(result.ExitCode == 0, result.Message);
+    Require(host.AppFiles.TryGetValue(PackageFixture.EmptyRuntime["app/".Length..], out string? digest) &&
+        digest == PackageFixture.Digest([]), "Installer did not stage the pinned empty file.");
+}
+
+static void WrongEmptyRuntimeDigest(PackageFixture fixture)
+{
+    var host = new FakeInstallerHost();
+    var options = fixture.Options(empty: PackageFixture.EmptyRuntime, emptySha256: PackageFixture.Digest([1]));
+    Refused(InstallerWorkflow.Run(options, host), "invalid size or SHA-256");
+    Untouched(host);
+}
+
+static void EmptyRequiredRuntimeFile(PackageFixture fixture)
+{
+    var host = new FakeInstallerHost();
+    Refused(InstallerWorkflow.Run(fixture.Options(empty: "app/flash-runtime/python.exe"), host), "invalid size or SHA-256");
+    Untouched(host);
+}
+
+static void EmptyNonRuntimeFile(PackageFixture fixture)
+{
+    var host = new FakeInstallerHost();
+    Refused(InstallerWorkflow.Run(fixture.Options(empty: "app/optional-empty.txt"), host), "invalid size or SHA-256");
     Untouched(host);
 }
 
@@ -193,6 +228,7 @@ static void Uninstall(PackageFixture fixture)
 sealed class PackageFixture(string folder)
 {
     internal const string Helper = "app/flash-helper/lu_flash_helper.py";
+    internal const string EmptyRuntime = "app/flash-runtime/packages/bitarray/py.typed";
     internal const int AppFileCount = 11;
     private const string App = "app/LimitedUnderground.FirmwareLoader";
     private static readonly string[] Files =
@@ -216,15 +252,18 @@ sealed class PackageFixture(string folder)
         return path;
     }
 
-    internal InstallerOptions Options(string? omit = null, string? alter = null, bool extra = false, bool unsafeEntry = false)
+    internal InstallerOptions Options(string? omit = null, string? alter = null, bool extra = false, bool unsafeEntry = false,
+        string? empty = null, string? emptySha256 = null)
     {
         string package = Path.Combine(folder, "package");
         Directory.CreateDirectory(package);
         var records = new SortedDictionary<string, object>(StringComparer.Ordinal);
-        foreach (string name in Files)
+        var names = empty is not null && !Files.Contains(empty) ? Files.Append(empty) : Files;
+        foreach (string name in names)
         {
-            byte[] bytes = Bytes(name);
-            records.Add(name, new { size = bytes.Length, sha256 = Digest(bytes) });
+            byte[] bytes = name == empty ? [] : Bytes(name);
+            string sha256 = name == empty && emptySha256 is not null ? emptySha256 : Digest(bytes);
+            records.Add(name, new { size = bytes.Length, sha256 });
             if (name == omit) continue;
             if (name == alter) bytes[0] ^= 1;
             WriteFile(package, name, bytes);

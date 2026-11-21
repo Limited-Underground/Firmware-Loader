@@ -20,6 +20,7 @@ $utf8 = [Text.UTF8Encoding]::new($false)
 $packageName = 'package-manifest.json'
 $appIdentity = 'LimitedUnderground.FirmwareLoader'
 $releaseFiles = 'release.json', 'raw.bin', 'padded.bin', 'release.sig'
+$emptyFileSha256 = 'E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855'
 
 function Open-PlainFile([string]$Path) {
     $file = [IO.FileInfo]::new([IO.Path]::GetFullPath($Path))
@@ -65,10 +66,11 @@ function Read-JsonFile([string]$Path, [long]$MaxBytes, [string]$ExpectedHash = '
     finally { $file.Dispose() }
 }
 
-function Assert-FileRecord($record) {
+function Assert-FileRecord($record, [bool]$AllowEmpty) {
     if ($record -isnot [Collections.IDictionary] -or $record.Count -ne 2 -or
-        $record['size'] -isnot [long] -or $record['size'] -le 0 -or $record['size'] -gt 512MB -or
-        $record['sha256'] -isnot [string] -or !(Test-Hash $record['sha256'])) {
+        $record['size'] -isnot [long] -or $record['size'] -lt 0 -or $record['size'] -gt 512MB -or
+        $record['sha256'] -isnot [string] -or !(Test-Hash $record['sha256']) -or
+        ($record['size'] -eq 0 -and (!$AllowEmpty -or $record['sha256'] -cne $emptyFileSha256))) {
         throw 'A package file record needs an exact byte count and uppercase SHA-256.'
     }
 }
@@ -95,14 +97,6 @@ function Read-Layout([string]$Path, [string]$Hash, [bool]$Package) {
         $layout['files'] -isnot [Collections.IDictionary] -or $layout['files'].Count -notin (1..16384)) {
         throw 'The tester package record has an invalid layout.'
     }
-    $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($name in $layout['files'].Keys) {
-        if (!$seen.Add($name) -or !(Test-AllowedPath $name $layout['mode'] $Package)) {
-            throw 'The package list contains an unsafe, repeated or unexpected path.'
-        }
-        Assert-FileRecord $layout['files'][$name]
-    }
-
     $required = @("app/$appIdentity.exe", "app/$appIdentity.dll", "app/$appIdentity.deps.json",
         "app/$appIdentity.runtimeconfig.json", 'app/flash-helper/lu_flash_helper.py',
         'app/flash-runtime/python.exe', 'app/flash-runtime/python314._pth', 'app/flash-runtime/python314.zip',
@@ -114,6 +108,16 @@ function Read-Layout([string]$Path, [string]$Hash, [bool]$Package) {
         if ($layout['mode'] -ceq 'qualification-candidate') { $required += "firmware/$side/release.sig" }
     }
     if ($Package) { $required += 'README.md','LICENSE' }
+
+    $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($name in $layout['files'].Keys) {
+        if (!$seen.Add($name) -or !(Test-AllowedPath $name $layout['mode'] $Package)) {
+            throw 'The package list contains an unsafe, repeated or unexpected path.'
+        }
+        $allowEmpty = $name.StartsWith('app/flash-runtime/', [StringComparison]::Ordinal) -and $name -cnotin $required
+        Assert-FileRecord $layout['files'][$name] $allowEmpty
+    }
+
     foreach ($name in $required) {
         if ($name -cnotin $layout['files'].Keys) { throw "The package list is missing $name." }
     }
