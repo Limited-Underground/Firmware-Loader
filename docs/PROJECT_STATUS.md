@@ -115,7 +115,7 @@ authority, hardware evidence, or readiness claim.
 - Close/open exceptions, null providers, identity mismatches, stale contexts, reentrant operations, and owner disposal remain providerless and expose only generic status.
 - Project-owned target rules are immutable and exact. Signer trust is a separate application-owned registry bound to the exact product/provider/version.
 - Provider trust configuration cannot set signer verification or release admission.
-- Production registers exactly one provider: `opentrail`, lifecycle version `1`, for Limited Underground Trail.
+- Production registers exactly one provider: `opentrail`, lifecycle version `1`, for MeshTrail.
 - Its immutable rule set admits only exact target key `heltec_v4_bench` and pins SHA-256 `ec818efab9a14ce4f0900068c9474acfe2577d74e2e39fa4850f3ff0567e9776` for the target-contract Git blob bytes from OpenTrail commit `a327104ac67a3f5918a8b0191c96dceb05b5399b`.
 - Production signer trust remains empty; candidate inspection can publish bounded structure/product/digest results but never signer trust or admission.
 - A canonical three-entry bundle-candidate schema is bounded by product key, target key, release generation, image length, SHA-256, signer identifier, and signature algorithm.
