@@ -1,6 +1,6 @@
 # Release signing key (trust anchor)
 
-The owner's key that signs Trail firmware release records. Created 2026-11-12 by the owner, who is the single release approver and key custodian.
+The owner's key that signs MeshTrail firmware release records. Created 2026-11-12 by the owner, who is the single release approver and key custodian.
 
 | Item | Value |
 |---|---|

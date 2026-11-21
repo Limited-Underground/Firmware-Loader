@@ -25,7 +25,7 @@ The source-guard test allows process and flashing code in exactly these two C# f
 3. **Before writing**, the chip's MD5 is taken for every span of the 16 MB layout. The layout comes from Trail's `heltec_v4_bench` `partitions.csv`: bootloader, partition table, otadata, gap, nvs, the written span, the rest of the factory partition, ota_0, ota_1 and ot_state.
 4. **Write:** esptool writes the image and checks its own MD5. The helper then reports the chip's MD5 of the region, and the adapter requires it to equal the MD5 of the image it was given.
 5. **Verify** (a separate command): all span digests are taken again. The engine computes the expected MD5 of the admitted image itself and compares it with the chip's digest of the written span. Every other span must be unchanged. MD5 here proves only that the transfer was correct. The release signature already proved the image is authentic before anything was written.
-6. **Boot:** a hard reset, then the start-up log is watched for a bounded time. The board is healthy only if the bootloader loaded the app from `0x10000` and Trail printed `companion boot self-check PASS`. The boot identity is asserted by the adapter, from that log and the matching checksum. A firmware-reported release identity comes with L7 step 4.
+6. **Boot:** a hard reset, then the start-up log is watched for a bounded time. The board is healthy only if the bootloader loaded the app from `0x10000` and MeshTrail printed `companion boot self-check PASS`. The boot identity is asserted by the adapter, from that log and the matching checksum. A firmware-reported release identity comes with L7 step 4.
 
 ## Not yet done
 

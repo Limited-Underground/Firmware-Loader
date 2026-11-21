@@ -25,20 +25,20 @@ Goals are bounded parsing, stale-authority refusal, sanitized status and reprodu
 
 ## 3. System Scope and Context
 
-This project is the shared customer-tool boundary. It does not own Limited Underground Trail or Limited Underground Display firmware; historical project/source identifiers are retained as provenance. Product projects remain authoritative for compatibility identifiers, target manifests, image hashes, signatures, recovery procedures, and physical acceptance.
+This project is the shared customer-tool boundary. It does not own MeshTrail or Display firmware; historical project/source identifiers are retained as provenance. Product projects remain authoritative for compatibility identifiers, target manifests, image hashes, signatures, recovery procedures, and physical acceptance.
 
 | External boundary | Current interaction and ownership |
 | --- | --- |
 | Operator / Windows picker | Explicit product choice and one read-only candidate stream; no automatic device selection. |
 | Windows filesystem | Untrusted candidate file; path not retained in displayed result. No production operational store is configured. |
-| Limited Underground MeshTrail / Limited Underground Display authorities | Target/artifact/compatibility/recovery facts; Trail embeds a target key/hash and public-contract provenance as source constants; there is no build-time retrieval or runtime network API. |
+| MeshTrail / Display authorities | Target/artifact/compatibility/recovery facts; MeshTrail embeds a target key/hash and public-contract provenance as source constants; there is no build-time retrieval or runtime network API. |
 | Physical device, signer service, production recovery store | Unresolved / no production connection. Fixture interfaces imply no real command path. |
 
 The [Structurizr model](architecture/workspace.dsl) owns context/container views and a focused component view distinguishing production from fixtures. One desktop runtime is one container; C# classes are not containers. See [model/export instructions](architecture/README.md).
 
 ## 4. Solution Strategy
 
-Separate target-owned facts from application-owned trust. The WPF composition root explicitly injects the production Trail inspection provider and empty signer trust. Immutable exact contexts bind publication to a current session/provider activation. Switching or closing revokes prior authority. Bounded stream parsing and fixed diagnostic categories protect data and status.
+Separate target-owned facts from application-owned trust. The WPF composition root explicitly injects the production MeshTrail inspection provider and empty signer trust. Immutable exact contexts bind publication to a current session/provider activation. Switching or closing revokes prior authority. Bounded stream parsing and fixed diagnostic categories protect data and status.
 
 The internal fixture admission/engine/store path supports synthetic validation, not production composition. Mathematical preservation and byte-binding checks authenticate neither geometry nor signer/device facts. Reuse existing contracts rather than treating fixture success as operational approval.
 
@@ -74,7 +74,7 @@ Every current snapshot reports all operational capabilities false:
 - firmware writing; and
 - recovery.
 
-These operational capabilities remain false. A separate `OfflineBundleInspectionAvailable` projection becomes true only for an active exact Trail provider lease; it grants access solely to the stream-based inspector and never implies signer, device, admission, or installation authority.
+These operational capabilities remain false. A separate `OfflineBundleInspectionAvailable` projection becomes true only for an active exact MeshTrail provider lease; it grants access solely to the stream-based inspector and never implies signer, device, admission, or installation authority.
 
 ### Retained provider lifecycle contract
 

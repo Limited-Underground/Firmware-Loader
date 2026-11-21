@@ -39,7 +39,7 @@ Update existing owning records rather than creating a competing journal. A hando
 - [Progress log](docs/PROGRESS_LOG.md): historical milestones, not a replacement for current acceptance.
 - [Repository](https://github.com/Limited-Underground/Firmware-Loader): source identity and access point. [Firmware Loader Project #3](https://github.com/orgs/Limited-Underground/projects/3) is the sole current Loader task authority; former Trail V1 Loader items are archived history. Recheck the exact item before selecting work. LUF-0010a concerns physical firmware installation/recovery, not source-file restoration.
 
-The standalone Firmware-Loader repository owns the common loader implementation. The old Trail tools/windows-loader implementation is a frozen predecessor, not a synchronized mirror or current implementation authority. Limited Underground MeshTrail and Limited Underground Display retain their own target manifests, compatibility evidence, artifacts, signer decisions and recovery decisions.
+The standalone Firmware-Loader repository owns the common loader implementation. The old Trail tools/windows-loader implementation is a frozen predecessor, not a synchronized mirror or current implementation authority. MeshTrail and Display retain their own target manifests, compatibility evidence, artifacts, signer decisions and recovery decisions.
 
 ## Product controls
 
