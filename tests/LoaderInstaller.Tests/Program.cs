@@ -1,7 +1,14 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using LimitedUnderground.FirmwareLoader.Setup;
+
+if (args is ["--probe-common-application-data"])
+{
+    Console.Write(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData));
+    return 0;
+}
 
 // Invoke the installer workflow in process through an inert host. These fixtures never
 // start the setup executable, invoke provisioning scripts or reach a device adapter.
@@ -10,6 +17,7 @@ if (args.Length != 1 || !Path.IsPathFullyQualified(args[0]) || !Directory.Exists
 
 var cases = new (string Name, Action<PackageFixture> Run)[]
 {
+    ("restricted provisioning child resolves Windows ProgramData", ProvisioningKnownFolder),
     ("non-administrator refused before changes", NonAdministrator),
     ("missing payload file refused before changes", MissingFile),
     ("altered same-size payload refused before changes", AlteredFile),
@@ -49,6 +57,29 @@ for (int index = 0; index < cases.Length; index++)
 if (failures != 0) return 1;
 Console.WriteLine($"PASS: {cases.Length} installer workflow fixture groups; injected host, no installer execution.");
 return 0;
+
+static void ProvisioningKnownFolder(PackageFixture fixture)
+{
+    string expected = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+    Require(Path.IsPathFullyQualified(expected), "The host must expose a local ProgramData path.");
+    string dotnet = Environment.ProcessPath ?? throw new InvalidOperationException("The test process path is unavailable.");
+    Directory.CreateDirectory(Path.Combine(fixture.Folder, "setup"));
+    var start = WindowsInstallerHost.CreateProvisioningStartInfo(dotnet, fixture.Folder);
+    start.ArgumentList.Add(typeof(PackageFixture).Assembly.Location);
+    start.ArgumentList.Add("--probe-common-application-data");
+    Require(!start.Environment.ContainsKey("USERPROFILE"), "The provisioning child inherited the user's environment.");
+    using var child = Process.Start(start) ?? throw new InvalidOperationException("The known-folder probe did not start.");
+    Task<string> output = child.StandardOutput.ReadToEndAsync();
+    Task<string> errors = child.StandardError.ReadToEndAsync();
+    if (!child.WaitForExit(15000))
+    {
+        child.Kill();
+        throw new InvalidOperationException("The known-folder probe timed out.");
+    }
+    Require(child.ExitCode == 0 && errors.GetAwaiter().GetResult().Length == 0, "The known-folder probe failed.");
+    Require(string.Equals(output.GetAwaiter().GetResult(), expected, StringComparison.OrdinalIgnoreCase),
+        "The restricted provisioning child cannot resolve the Windows ProgramData path.");
+}
 
 static void Require(bool condition, string message)
 {
@@ -227,6 +258,8 @@ static void Uninstall(PackageFixture fixture)
 
 sealed class PackageFixture(string folder)
 {
+    internal string Folder => folder;
+
     internal const string Helper = "app/flash-helper/lu_flash_helper.py";
     internal const string EmptyRuntime = "app/flash-runtime/packages/bitarray/py.typed";
     internal const int AppFileCount = 11;
