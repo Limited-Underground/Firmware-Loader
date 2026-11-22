@@ -94,23 +94,7 @@ internal sealed class WindowsInstallerHost(InstallerOptions options) : IInstalle
                     throw new InstallerRefusalException("The installed setup files do not match this installer.");
             }
 
-            var start = new ProcessStartInfo(shellFile)
-            {
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                WorkingDirectory = InstallDirectory,
-            };
-            string systemDirectory = Environment.SystemDirectory;
-            string windowsDirectory = Path.GetDirectoryName(systemDirectory)!;
-            string shellDirectory = Path.GetDirectoryName(shellFile)!;
-            start.Environment.Clear();
-            start.Environment["SystemRoot"] = windowsDirectory;
-            start.Environment["WINDIR"] = windowsDirectory;
-            start.Environment["Path"] = systemDirectory + ";" + shellDirectory;
-            start.Environment["PSModulePath"] = Path.Combine(shellDirectory, "Modules");
-            start.Environment["TEMP"] = start.Environment["TMP"] = Path.Combine(InstallDirectory, "setup");
+            var start = CreateProvisioningStartInfo(shellFile, InstallDirectory);
             foreach (string arg in new[] { "-NoLogo", "-NoProfile", "-NonInteractive", "-File",
                 Path.Combine(InstallDirectory, "setup", ProvisionScript), "-InstalledLoader", Path.Combine(InstallDirectory, Loader) })
                 start.ArgumentList.Add(arg);
@@ -144,6 +128,30 @@ internal sealed class WindowsInstallerHost(InstallerOptions options) : IInstalle
             };
         }
         finally { foreach (var handle in scriptHandles) handle.Dispose(); }
+    }
+
+    internal static ProcessStartInfo CreateProvisioningStartInfo(string shellFile, string installDirectory)
+    {
+        var start = new ProcessStartInfo(shellFile)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            WorkingDirectory = installDirectory,
+        };
+        string systemDirectory = Environment.SystemDirectory;
+        string windowsDirectory = Path.GetDirectoryName(systemDirectory)!;
+        string shellDirectory = Path.GetDirectoryName(shellFile)!;
+        start.Environment.Clear();
+        start.Environment["SystemRoot"] = windowsDirectory;
+        start.Environment["WINDIR"] = windowsDirectory;
+        // Supply the Windows volume for known-folder expansion without inheriting caller-supplied paths.
+        start.Environment["SystemDrive"] = Path.GetPathRoot(windowsDirectory)!.TrimEnd(Path.DirectorySeparatorChar);
+        start.Environment["Path"] = systemDirectory + ";" + shellDirectory;
+        start.Environment["PSModulePath"] = Path.Combine(shellDirectory, "Modules");
+        start.Environment["TEMP"] = start.Environment["TMP"] = Path.Combine(installDirectory, "setup");
+        return start;
     }
 
     private void ValidateSource()
