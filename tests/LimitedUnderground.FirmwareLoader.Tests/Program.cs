@@ -63,6 +63,7 @@ var tests = new (string Name, Action Run)[]
 .Concat(QualificationReleaseTests.All)
 .Concat(QualificationInstallTests.All)
 .Concat(DailyLoaderProtocolTests.All)
+.Concat(DailyLoaderClientTests.All)
 .Concat(HostOperationStoreTests.All)
 .Concat(RestrictedTokenStoreTests.All)
 .Concat(MachineRecoveryStorePolicyTests.All)

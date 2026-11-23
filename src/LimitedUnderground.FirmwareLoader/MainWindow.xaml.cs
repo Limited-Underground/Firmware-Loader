@@ -235,7 +235,7 @@ public partial class MainWindow : Window
         var cancellation = lifetime.Token;
         InstallReleaseButton.IsEnabled = ContinueButton.IsEnabled = BackButton.IsEnabled = false;
         SafetyFooter.Text = "QUALIFICATION INSTALL — approved MeshTrail boards only. A write requires your confirmation.";
-        ShowInstallMessage("Checking the release and board", "Connect only the assigned board and keep it plugged in.");
+        ShowInstallMessage("Checking the release and board", "Connect only the assigned board and keep it plugged in. The first check after the PC starts can take a few minutes.");
         bool confirmationSent = false;
         try
         {

@@ -12,30 +12,37 @@ internal sealed class DailyLoaderClient(NamedPipeClientStream pipe) : IAsyncDisp
 
     internal static bool HasRegisteredTask() => AccessScheduledTask(start: false);
 
-    internal static async Task<DailyLoaderClient?> ConnectAsync(CancellationToken cancellation)
+    // The worker creates its endpoint soon after the task starts and waits 30 seconds for this client.
+    // Its first reply comes only after it has verified every packaged runtime file, which on a freshly
+    // started PC (cold disk cache, first antivirus scan) can take far longer than starting does.
+    internal static readonly TimeSpan EndpointLimit = TimeSpan.FromSeconds(30);
+    internal static readonly TimeSpan FirstReplyLimit = TimeSpan.FromMinutes(3);
+
+    internal static Task<DailyLoaderClient?> ConnectAsync(CancellationToken cancellation) =>
+        ConnectAsync(() => AccessScheduledTask(start: true), DailyLoaderPipe.TryConnect, EndpointLimit, FirstReplyLimit, cancellation);
+
+    internal static async Task<DailyLoaderClient?> ConnectAsync(Func<bool> startWorker, Func<NamedPipeClientStream?> tryConnect,
+        TimeSpan endpointLimit, TimeSpan firstReplyLimit, CancellationToken cancellation)
     {
-        if (!await Task.Run(() => AccessScheduledTask(start: true), cancellation).ConfigureAwait(true)) return null;
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
-        deadline.CancelAfter(TimeSpan.FromSeconds(20));
+        if (!await Task.Run(startWorker, cancellation).ConfigureAwait(true)) return null;
         try
         {
-            while (!deadline.IsCancellationRequested)
+            NamedPipeClientStream? transport = null;
+            using (var endpoint = CancellationTokenSource.CreateLinkedTokenSource(cancellation))
             {
-                var transport = DailyLoaderPipe.TryConnect();
-                if (transport is null)
-                {
-                    await Task.Delay(125, deadline.Token).ConfigureAwait(true);
-                    continue;
-                }
-                try
-                {
-                    await DailyLoaderProtocol.WriteRequestAsync(transport, DailyLoaderRequest.Connect, deadline.Token).ConfigureAwait(true);
-                    await DailyLoaderProtocol.ReadStatusAsync(transport, deadline.Token).ConfigureAwait(true);
-                    return new DailyLoaderClient(transport);
-                }
-                catch { await transport.DisposeAsync().ConfigureAwait(true); throw; }
+                endpoint.CancelAfter(endpointLimit);
+                while ((transport = tryConnect()) is null)
+                    await Task.Delay(125, endpoint.Token).ConfigureAwait(true);
             }
-            return null;
+            try
+            {
+                using var reply = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+                reply.CancelAfter(firstReplyLimit);
+                await DailyLoaderProtocol.WriteRequestAsync(transport, DailyLoaderRequest.Connect, reply.Token).ConfigureAwait(true);
+                await DailyLoaderProtocol.ReadStatusAsync(transport, reply.Token).ConfigureAwait(true);
+                return new DailyLoaderClient(transport);
+            }
+            catch { await transport.DisposeAsync().ConfigureAwait(true); throw; }
         }
         catch (OperationCanceledException) when (!cancellation.IsCancellationRequested) { return null; }
         catch (Exception ex) when (ex is IOException or Win32Exception or UnauthorizedAccessException or JsonException) { return null; }
