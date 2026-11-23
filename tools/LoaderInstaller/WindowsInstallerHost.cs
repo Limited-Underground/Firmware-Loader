@@ -148,6 +148,10 @@ internal sealed class WindowsInstallerHost(InstallerOptions options) : IInstalle
         start.Environment["WINDIR"] = windowsDirectory;
         // Supply the Windows volume for known-folder expansion without inheriting caller-supplied paths.
         start.Environment["SystemDrive"] = Path.GetPathRoot(windowsDirectory)!.TrimEnd(Path.DirectorySeparatorChar);
+        // The native apphost uses this default when the runtime has no registry registration.
+        start.Environment["ProgramFiles"] = ProgramFiles;
+        // A native startup failure must return to the unattended provisioning process.
+        start.Environment["DOTNET_DISABLE_GUI_ERRORS"] = "1";
         start.Environment["Path"] = systemDirectory + ";" + shellDirectory;
         start.Environment["PSModulePath"] = Path.Combine(shellDirectory, "Modules");
         start.Environment["TEMP"] = start.Environment["TMP"] = Path.Combine(installDirectory, "setup");

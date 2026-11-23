@@ -18,6 +18,7 @@ if (args.Length != 1 || !Path.IsPathFullyQualified(args[0]) || !Directory.Exists
 var cases = new (string Name, Action<PackageFixture> Run)[]
 {
     ("restricted provisioning child resolves Windows ProgramData", ProvisioningKnownFolder),
+    ("restricted provisioning child locates the unregistered desktop runtime without a GUI", ProvisioningNativeRuntimeEnvironment),
     ("non-administrator refused before changes", NonAdministrator),
     ("missing payload file refused before changes", MissingFile),
     ("altered same-size payload refused before changes", AlteredFile),
@@ -57,6 +58,33 @@ for (int index = 0; index < cases.Length; index++)
 if (failures != 0) return 1;
 Console.WriteLine($"PASS: {cases.Length} installer workflow fixture groups; injected host, no installer execution.");
 return 0;
+
+static void ProvisioningNativeRuntimeEnvironment(PackageFixture fixture)
+{
+    string expected = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+    Require(Path.IsPathFullyQualified(expected), "The Windows Program Files folder was unavailable.");
+    string[] names = ["ProgramFiles", "DOTNET_ROOT", "DOTNET_ROOT_X64", "DOTNET_DISABLE_GUI_ERRORS"];
+    string?[] previous = names.Select(Environment.GetEnvironmentVariable).ToArray();
+    try
+    {
+        foreach (string name in names)
+            Environment.SetEnvironmentVariable(name, fixture.Folder);
+        var start = WindowsInstallerHost.CreateProvisioningStartInfo(
+            Path.Combine(expected, "PowerShell", "7", "pwsh.exe"), fixture.Folder);
+        Require(start.Environment.TryGetValue("ProgramFiles", out string? path) &&
+            string.Equals(path, expected, StringComparison.OrdinalIgnoreCase),
+            "The unregistered desktop runtime needs ProgramFiles from the Windows known folder.");
+        Require(!start.Environment.ContainsKey("DOTNET_ROOT") && !start.Environment.ContainsKey("DOTNET_ROOT_X64"),
+            "Caller-controlled runtime search overrides leaked into provisioning.");
+        Require(start.Environment.TryGetValue("DOTNET_DISABLE_GUI_ERRORS", out string? value) && value == "1",
+            "A missing runtime could block provisioning in a GUI prompt.");
+    }
+    finally
+    {
+        for (int index = 0; index < names.Length; index++)
+            Environment.SetEnvironmentVariable(names[index], previous[index]);
+    }
+}
 
 static void ProvisioningKnownFolder(PackageFixture fixture)
 {
