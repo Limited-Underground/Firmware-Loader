@@ -239,10 +239,12 @@ public partial class MainWindow : Window
         bool confirmationSent = false;
         try
         {
-            await using var worker = await DailyLoaderClient.ConnectAsync(cancellation);
+            var connection = await DailyLoaderClient.ConnectAsync(cancellation);
+            await using var worker = connection.Client;
             if (worker is null)
             {
-                ShowInstallMessage("Daily qualification unavailable", "Ask your test coordinator to check the setup and the Windows account assigned to this PC.");
+                ShowInstallMessage("Daily qualification unavailable",
+                    $"Ask your test coordinator to check the setup and the Windows account assigned to this PC. Reference: {connection.Reference}.");
                 return;
             }
             var ready = await worker.PrepareAsync(files, cancellation);

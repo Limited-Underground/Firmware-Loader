@@ -10,7 +10,7 @@ internal sealed class DailyLoaderClient(NamedPipeClientStream pipe) : IAsyncDisp
 {
     internal const string TaskName = "LimitedUnderground.FirmwareLoader.DailyWorker";
 
-    internal static bool HasRegisteredTask() => AccessScheduledTask(start: false);
+    internal static bool HasRegisteredTask() => AccessScheduledTask(start: false) == 0;
 
     // The worker creates its endpoint soon after the task starts and waits 30 seconds for this client.
     // Its first reply comes only after it has verified every packaged runtime file, which on a freshly
@@ -18,53 +18,84 @@ internal sealed class DailyLoaderClient(NamedPipeClientStream pipe) : IAsyncDisp
     internal static readonly TimeSpan EndpointLimit = TimeSpan.FromSeconds(30);
     internal static readonly TimeSpan FirstReplyLimit = TimeSpan.FromMinutes(3);
 
-    internal static Task<DailyLoaderClient?> ConnectAsync(CancellationToken cancellation) =>
+    // A failed connection carries a short reference for the test coordinator. It names the step only;
+    // the worker's own stage is in the scheduled task's last result.
+    //   T-<hresult>  the task could not be opened or started for this Windows user
+    //   E1           the worker endpoint did not appear in time
+    //   E2-<code>    opening the endpoint failed with this Windows error
+    //   E3           the endpoint is not owned by the Windows system account
+    //   R1           the worker did not reply in time
+    //   R2           the worker closed the connection before replying
+    //   R3           the worker's reply was unreadable
+    internal sealed record ConnectResult(DailyLoaderClient? Client, string Reference);
+
+    internal static Task<ConnectResult> ConnectAsync(CancellationToken cancellation) =>
         ConnectAsync(() => AccessScheduledTask(start: true), DailyLoaderPipe.TryConnect, EndpointLimit, FirstReplyLimit, cancellation);
 
-    internal static async Task<DailyLoaderClient?> ConnectAsync(Func<bool> startWorker, Func<NamedPipeClientStream?> tryConnect,
+    internal static async Task<ConnectResult> ConnectAsync(Func<int> startWorker, Func<NamedPipeClientStream?> tryConnect,
         TimeSpan endpointLimit, TimeSpan firstReplyLimit, CancellationToken cancellation)
     {
-        if (!await Task.Run(startWorker, cancellation).ConfigureAwait(true)) return null;
-        try
+        int started = await Task.Run(startWorker, cancellation).ConfigureAwait(true);
+        if (started != 0) return new(null, $"T-{started:X8}");
+        NamedPipeClientStream? transport = null;
+        using (var endpoint = CancellationTokenSource.CreateLinkedTokenSource(cancellation))
         {
-            NamedPipeClientStream? transport = null;
-            using (var endpoint = CancellationTokenSource.CreateLinkedTokenSource(cancellation))
+            endpoint.CancelAfter(endpointLimit);
+            try
             {
-                endpoint.CancelAfter(endpointLimit);
                 while ((transport = tryConnect()) is null)
                     await Task.Delay(125, endpoint.Token).ConfigureAwait(true);
             }
-            try
-            {
-                using var reply = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
-                reply.CancelAfter(firstReplyLimit);
-                await DailyLoaderProtocol.WriteRequestAsync(transport, DailyLoaderRequest.Connect, reply.Token).ConfigureAwait(true);
-                await DailyLoaderProtocol.ReadStatusAsync(transport, reply.Token).ConfigureAwait(true);
-                return new DailyLoaderClient(transport);
-            }
-            catch { await transport.DisposeAsync().ConfigureAwait(true); throw; }
+            catch (OperationCanceledException) when (!cancellation.IsCancellationRequested) { return new(null, "E1"); }
+            catch (Win32Exception ex) { return new(null, $"E2-{ex.NativeErrorCode}"); }
+            catch (UnauthorizedAccessException) { return new(null, "E3"); }
+            catch (IOException ex) { return new(null, $"E2-{ex.HResult & 0xFFFF}"); }
         }
-        catch (OperationCanceledException) when (!cancellation.IsCancellationRequested) { return null; }
-        catch (Exception ex) when (ex is IOException or Win32Exception or UnauthorizedAccessException or JsonException) { return null; }
+        try
+        {
+            using var reply = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+            reply.CancelAfter(firstReplyLimit);
+            await DailyLoaderProtocol.WriteRequestAsync(transport, DailyLoaderRequest.Connect, reply.Token).ConfigureAwait(true);
+            await DailyLoaderProtocol.ReadStatusAsync(transport, reply.Token).ConfigureAwait(true);
+            return new(new DailyLoaderClient(transport), "");
+        }
+        catch (Exception ex) when (ex is OperationCanceledException && !cancellation.IsCancellationRequested ||
+            ex is IOException or JsonException or Win32Exception or UnauthorizedAccessException)
+        {
+            await transport.DisposeAsync().ConfigureAwait(true);
+            return new(null, ex switch
+            {
+                OperationCanceledException => "R1",
+                EndOfStreamException => "R2",
+                InvalidDataException or JsonException => "R3",
+                _ => "R2",
+            });
+        }
+        catch
+        {
+            await transport.DisposeAsync().ConfigureAwait(true);
+            throw;
+        }
     }
 
     // The installed task accepts no user arguments. Activation and its authorization stay in Windows.
-    private static bool AccessScheduledTask(bool start)
+    // Returns 0 on success, otherwise the Windows result code (or -1 when Task Scheduler is unavailable).
+    private static int AccessScheduledTask(bool start)
     {
         object? service = null, folder = null, task = null, run = null;
         try
         {
             Type? taskService = Type.GetTypeFromProgID("Schedule.Service");
-            if (taskService is null || (service = Activator.CreateInstance(taskService)) is null) return false;
+            if (taskService is null || (service = Activator.CreateInstance(taskService)) is null) return -1;
             dynamic connection = service;
             connection.Connect();
             folder = connection.GetFolder("\\");
             task = ((dynamic)folder).GetTask(TaskName);
             if (start) run = ((dynamic)task).Run(null);
-            return true;
+            return 0;
         }
         catch (Exception ex) when (ex is COMException or UnauthorizedAccessException or
-            Microsoft.CSharp.RuntimeBinder.RuntimeBinderException or InvalidOperationException) { return false; }
+            Microsoft.CSharp.RuntimeBinder.RuntimeBinderException or InvalidOperationException) { return ex.HResult == 0 ? -1 : ex.HResult; }
         finally
         {
             foreach (object? value in new[] { run, task, folder, service })
