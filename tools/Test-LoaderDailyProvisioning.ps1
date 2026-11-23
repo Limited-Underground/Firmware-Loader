@@ -55,6 +55,40 @@ function New-State {
 }
 
 $cases = [ordered]@{
+    'worker task definition is accepted by Task Scheduler and by the setup check' = {
+        # Uses the exact functions from the setup script. TASK_VALIDATE_ONLY (1) registers nothing.
+        $tokens = $null; $parseErrors = $null
+        $setupAst = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'Install-LoaderDailyWorker.ps1'), [ref]$tokens, [ref]$parseErrors)
+        Assert ($parseErrors.Count -eq 0) 'The setup script does not parse.'
+        $wanted = 'New-WorkerTaskDefinition','Get-RegisteredWorker','Get-WorkerTaskSDDL','Format-SetupDetail'
+        $definitions = @($setupAst.FindAll({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -in $wanted }, $false))
+        Assert ($definitions.Count -eq $wanted.Count) 'Setup task functions are missing.'
+        . ([scriptblock]::Create(($definitions | ForEach-Object { $_.Extent.Text }) -join [Environment]::NewLine))
+        $system = [Security.Principal.SecurityIdentifier]::new('S-1-5-18')
+        $sidType = [Security.Principal.SecurityIdentifier]
+        $taskName = 'LimitedUnderground.FirmwareLoader.DailyWorker'
+        $taskArgument = '--daily-worker'
+        $exe = [IO.FileInfo]::new('C:\Program Files\LimitedUnderground.FirmwareLoader\LimitedUnderground.FirmwareLoader.exe')
+        $scheduler = New-Object -ComObject 'Schedule.Service'
+        $scheduler.Connect()
+        $root = $scheduler.GetFolder('\')
+        $sddl = Get-WorkerTaskSDDL $operator
+        $validate = { param($Definition) $null = $root.RegisterTaskDefinition('LimitedUnderground.FirmwareLoader.ValidateOnly', $Definition, 1, $system.Value, $null, 5, $sddl) }
+        $definition = New-WorkerTaskDefinition
+        & $validate $definition
+        $fake = [pscustomobject]@{ Definition = $definition; Enabled = $false }
+        $fake | Add-Member ScriptMethod GetSecurityDescriptor { param($info) $sddl }
+        $taskFolder = [pscustomobject]@{}
+        $taskFolder | Add-Member ScriptMethod GetTask { param($name) $fake }
+        Assert ($null -ne (Get-RegisteredWorker $operator)) 'The setup check refused the definition setup creates.'
+        $definition.Settings.DeleteExpiredTaskAfter = 'PT0S'
+        $code = try { & $validate $definition; 0 } catch { $e = $_.Exception; while ($e.InnerException) { $e = $e.InnerException }; $e.HResult }
+        Assert ($code -eq -2147216615) 'Task Scheduler accepted expiry deletion without a trigger end boundary.'
+        Refuse { Get-RegisteredWorker $operator } 'The existing worker task does not match the protected setup.'
+        $script:setupStep = 'registering the worker task'
+        $detail = Format-SetupDetail ([Runtime.InteropServices.COMException]::new("(42,4):EndBoundary:`r`n$('A' * 64) $operator", -2147216615))
+        Assert ($detail -ceq 'LOADER-SETUP-DETAIL: registering the worker task: (42,4):EndBoundary: [redacted SHA-256] [user SID] (0x80041319)') "Unexpected detail: $detail"
+    }
     'stock ProgramData permissions on an ancestor' = {
         # 0x116 is the stock Users write ACE. 0x110 isolates the two attribute rights.
         $acl = [Security.AccessControl.DirectorySecurity]::new()

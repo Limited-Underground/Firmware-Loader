@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
+using System.Text.RegularExpressions;
 
 namespace LimitedUnderground.FirmwareLoader.Setup;
 
@@ -115,9 +116,7 @@ internal sealed class WindowsInstallerHost(InstallerOptions options) : IInstalle
             string diagnostics = errors.GetAwaiter().GetResult();
             string result = output.GetAwaiter().GetResult().Trim();
             if (process.ExitCode != 0)
-                throw new InstallerRefusalException(PlainSetupErrors.FirstOrDefault(message =>
-                    diagnostics.Contains(message, StringComparison.Ordinal)) ??
-                    "Firmware Loader could not apply setup. Ask the installation administrator to check the approved Windows user, board assignment and retained setup state.");
+                throw new InstallerRefusalException(DescribeSetupFailure(diagnostics));
             return result switch
             {
                 "Daily worker setup is ready." => "Firmware Loader setup is ready for the assigned Windows user.",
@@ -128,6 +127,26 @@ internal sealed class WindowsInstallerHost(InstallerOptions options) : IInstalle
             };
         }
         finally { foreach (var handle in scriptHandles) handle.Dispose(); }
+    }
+
+    internal const string GeneralSetupFailure =
+        "Firmware Loader could not apply setup. Ask the installation administrator to check the approved Windows user, board assignment and retained setup state.";
+    private const string SetupDetailPrefix = "LOADER-SETUP-DETAIL: ";
+
+    // A known plain refusal is shown as is. Otherwise the general message carries the setup script's
+    // one-line detail (failing step, message, Windows code), redacted again here and length-limited.
+    internal static string DescribeSetupFailure(string diagnostics)
+    {
+        string? plain = PlainSetupErrors.FirstOrDefault(message => diagnostics.Contains(message, StringComparison.Ordinal));
+        if (plain is not null) return plain;
+        string? line = diagnostics.Split('\n').Select(item => item.Trim())
+            .LastOrDefault(item => item.StartsWith(SetupDetailPrefix, StringComparison.Ordinal));
+        if (line is null) return GeneralSetupFailure;
+        string detail = Regex.Replace(line[SetupDetailPrefix.Length..], @"[\x00-\x1F\x7F]+", " ");
+        detail = Regex.Replace(detail, "[0-9A-Fa-f]{64,}", "[redacted SHA-256]");
+        detail = Regex.Replace(detail, @"S-1-5-21(-[0-9]+){3,4}", "[user SID]").Trim();
+        if (detail.Length > 300) detail = detail[..300];
+        return detail.Length == 0 ? GeneralSetupFailure : $"{GeneralSetupFailure} Setup detail: {detail}";
     }
 
     internal static ProcessStartInfo CreateProvisioningStartInfo(string shellFile, string installDirectory)
