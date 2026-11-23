@@ -10,6 +10,29 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+
+function Format-SetupDetail($Failure) {
+    # One redacted line for the installer: the failing step, the message and the Windows result code.
+    $inner = $Failure
+    while ($inner.InnerException) { $inner = $inner.InnerException }
+    $text = "$($script:setupStep): $($inner.Message)"
+    if ($inner -is [Runtime.InteropServices.COMException] -or $inner -is [ComponentModel.Win32Exception] -or
+        $inner -is [IO.IOException] -or $inner -is [UnauthorizedAccessException]) {
+        $text += (' (0x{0:X8})' -f $inner.HResult)
+    }
+    $text = [regex]::Replace($text, '[\x00-\x1F\x7F]+', ' ')
+    $text = [regex]::Replace($text, '(?i)[0-9a-f]{64,}', '[redacted SHA-256]')
+    $text = [regex]::Replace($text, 'S-1-5-21(-[0-9]+){3,4}', '[user SID]')
+    $text = $text.Trim()
+    if ($text.Length -gt 300) { $text = $text.Substring(0, 300) }
+    return 'LOADER-SETUP-DETAIL: ' + $text
+}
+$script:setupStep = 'checking setup inputs'
+trap {
+    try { [Console]::Error.WriteLine((Format-SetupDetail $_.Exception)) } catch { }
+    break
+}
+
 Import-Module (Join-Path $PSScriptRoot 'LoaderDailyProvisioning.psm1') -Force
 
 $administrators = [Security.Principal.SecurityIdentifier]::new('S-1-5-32-544')
@@ -211,7 +234,7 @@ function Get-RegisteredWorker([string] $Sid) {
         $failure = $_.Exception
         while ($failure.InnerException) { $failure = $failure.InnerException }
         if ($failure.HResult -eq -2147024894) { return $null } # HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)
-        throw 'Firmware Loader setup could not inspect Task Scheduler.'
+        throw ('Firmware Loader setup could not inspect Task Scheduler (0x{0:X8}).' -f $failure.HResult)
     }
     if (!$Sid) { throw 'An existing worker task has no matching protected assignment.' }
     $def = $task.Definition
@@ -226,7 +249,7 @@ function Get-RegisteredWorker([string] $Sid) {
         $def.Settings.DisallowStartIfOnBatteries -or $def.Settings.StopIfGoingOnBatteries -or $def.Settings.RunOnlyIfIdle -or
         $def.Settings.IdleSettings.StopOnIdleEnd -or $def.Settings.IdleSettings.RestartOnIdle -or
         $def.Settings.RunOnlyIfNetworkAvailable -or $def.Settings.StartWhenAvailable -or $def.Settings.WakeToRun -or
-        $def.Settings.DeleteExpiredTaskAfter -cne 'PT0S') {
+        ![string]::IsNullOrEmpty($def.Settings.DeleteExpiredTaskAfter)) {
         throw 'The existing worker task does not match the protected setup.'
     }
     $action = $def.Actions.Item(1)
@@ -256,7 +279,7 @@ function Stop-WorkerLaunches($Task) {
     }
 }
 
-function Register-DisabledWorker([string] $Sid) {
+function New-WorkerTaskDefinition {
     $definition = $scheduler.NewTask(0)
     $definition.RegistrationInfo.Description = 'Limited Underground Firmware Loader qualification worker'
     $definition.Principal.UserId = $system.Value
@@ -272,7 +295,8 @@ function Register-DisabledWorker([string] $Sid) {
     $definition.Settings.RunOnlyIfNetworkAvailable = $false
     $definition.Settings.StartWhenAvailable = $false
     $definition.Settings.WakeToRun = $false
-    $definition.Settings.DeleteExpiredTaskAfter = 'PT0S'
+    # DeleteExpiredTaskAfter stays unset: the worker has no triggers and so never expires.
+    # Windows refuses any value without a trigger end boundary (0x80041319, EndBoundary).
     # The engine owns phase deadlines and holds the recovery lease through native quiescence.
     $definition.Settings.ExecutionTimeLimit = 'PT0S'
     $definition.Settings.MultipleInstances = 2 # TASK_INSTANCES_IGNORE_NEW
@@ -281,6 +305,11 @@ function Register-DisabledWorker([string] $Sid) {
     $action.Path = $exe.FullName
     $action.Arguments = $taskArgument
     $action.WorkingDirectory = $exe.DirectoryName
+    return $definition
+}
+
+function Register-DisabledWorker([string] $Sid) {
+    $definition = New-WorkerTaskDefinition
     # TASK_CREATE | TASK_DONT_ADD_PRINCIPAL_ACE. Refuse a racing or foreign task.
     $null = $taskFolder.RegisterTaskDefinition($taskName,$definition,18,$system.Value,$null,5,(Get-WorkerTaskSDDL $Sid))
     $registered = Get-RegisteredWorker $Sid
@@ -371,11 +400,15 @@ function Lock-Setup {
 }
 
 if (!$IsWindows -or ![Environment]::Is64BitProcess) { throw 'Firmware Loader setup requires 64-bit Windows PowerShell 7.' }
+$script:setupStep = 'checking the installed Loader'
 $exe = Get-ProtectedLoader $InstalledLoader
+$script:setupStep = 'reading the board assignment'
 $assignment = if (!$Uninstall) { Get-SetupAssignment } else { $null }
+$script:setupStep = 'locking setup'
 $mutex = Lock-Setup
 $transaction = @{ Lease = $null }
 try {
+    $script:setupStep = 'checking ProgramData'
     $commonData = [Environment]::GetFolderPath([Environment+SpecialFolder]::CommonApplicationData)
     Assert-LocalPath $commonData
     Assert-NoOrdinaryWrites (Get-PlainPathItem $commonData) -AncestorOnly
@@ -390,27 +423,31 @@ try {
     $pendingPath = Join-Path $dailyRoot 'assignment.pending.json'
     $clockPath = Join-Path $dailyRoot 'production-admission.state'
 
+    $script:setupStep = 'connecting to Task Scheduler'
     $scheduler = New-Object -ComObject 'Schedule.Service'
     $scheduler.Connect()
     $taskFolder = $scheduler.GetFolder('\')
     $backend = @{
-        ReadState = { Read-ProvisioningState }
-        InspectTask = { param($sid) $task = Get-RegisteredWorker $sid; return [bool]($task -and $task.Enabled) }
-        InitializeStore = { Initialize-ProtectedStore }
-        EnsureClock = { param($fresh) Initialize-DailyClock $fresh }
+        ReadState = { $script:setupStep = 'reading preserved state'; Read-ProvisioningState }
+        InspectTask = { param($sid) $script:setupStep = 'inspecting the worker task'; $task = Get-RegisteredWorker $sid; return [bool]($task -and $task.Enabled) }
+        InitializeStore = { $script:setupStep = 'initializing the machine store'; Initialize-ProtectedStore }
+        EnsureClock = { param($fresh) $script:setupStep = 'writing the admission clock'; Initialize-DailyClock $fresh }
         Begin = {
             param($candidate, $prior)
+            $script:setupStep = 'recording the pending assignment'
             if ((Read-ProtectedText $activePath) -cne $prior) { throw 'The preserved Firmware Loader assignment changed during setup.' }
             Write-SetupRecord $pendingPath $candidate
         }
         StageTask = {
             param($sid, $change)
+            $script:setupStep = 'registering the worker task'
             $task = Get-RegisteredWorker $sid
             if ($task) { Stop-WorkerLaunches $task } else { Register-DisabledWorker $sid }
             Hold-RecoveryLease $change
         }
         Publish = {
             param($candidate, $prior)
+            $script:setupStep = 'publishing the assignment'
             if ((Read-ProtectedText $pendingPath) -cne $candidate -or (Read-ProtectedText $activePath) -cne $prior) {
                 throw 'The preserved Firmware Loader assignment changed during setup.'
             }
@@ -418,6 +455,7 @@ try {
         }
         EnableTask = {
             param($sid)
+            $script:setupStep = 'enabling the worker task'
             $task = Get-RegisteredWorker $sid
             if (!$task) { throw 'The protected Firmware Loader worker task disappeared during setup.' }
             $task.Enabled = $true
@@ -425,6 +463,7 @@ try {
         }
         Complete = {
             param($candidate)
+            $script:setupStep = 'confirming the assignment'
             if ((Read-ProtectedText $activePath) -cne $candidate -or (Read-ProtectedText $pendingPath) -cne $candidate) {
                 throw 'Firmware Loader setup could not confirm the committed assignment.'
             }
@@ -432,6 +471,7 @@ try {
         }
         RemoveTask = {
             param($sid)
+            $script:setupStep = 'removing the worker task'
             $task = Get-RegisteredWorker $sid
             if ($task) {
                 Stop-WorkerLaunches $task

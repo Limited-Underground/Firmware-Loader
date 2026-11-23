@@ -19,6 +19,7 @@ var cases = new (string Name, Action<PackageFixture> Run)[]
 {
     ("restricted provisioning child resolves Windows ProgramData", ProvisioningKnownFolder),
     ("restricted provisioning child locates the unregistered desktop runtime without a GUI", ProvisioningNativeRuntimeEnvironment),
+    ("unexpected provisioning failure reports the redacted setup detail", ProvisioningFailureDetail),
     ("non-administrator refused before changes", NonAdministrator),
     ("missing payload file refused before changes", MissingFile),
     ("altered same-size payload refused before changes", AlteredFile),
@@ -58,6 +59,25 @@ for (int index = 0; index < cases.Length; index++)
 if (failures != 0) return 1;
 Console.WriteLine($"PASS: {cases.Length} installer workflow fixture groups; injected host, no installer execution.");
 return 0;
+
+static void ProvisioningFailureDetail(PackageFixture fixture)
+{
+    string general = WindowsInstallerHost.GeneralSetupFailure;
+    Require(WindowsInstallerHost.DescribeSetupFailure("") == general, "An empty diagnostic changed the general refusal.");
+    Require(WindowsInstallerHost.DescribeSetupFailure("unrelated text\r\n") == general, "Unmarked diagnostics leaked into the refusal.");
+    const string plain = "Another Firmware Loader setup is in progress.";
+    Require(WindowsInstallerHost.DescribeSetupFailure($"LOADER-SETUP-DETAIL: locking setup: {plain}\r\n{plain}\r\n") == plain,
+        "A known plain refusal must stay unchanged.");
+    string hash = new string('a', 64);
+    string described = WindowsInstallerHost.DescribeSetupFailure(
+        "Exception calling RegisterTaskDefinition\r\n" +
+        $"LOADER-SETUP-DETAIL: registering the worker task: (42,4):EndBoundary:\t{hash} S-1-5-21-101-102-103-1001 (0x80041319)\r\n");
+    Require(described == general + " Setup detail: registering the worker task: (42,4):EndBoundary: [redacted SHA-256] [user SID] (0x80041319)",
+        $"Unexpected setup detail: {described}");
+    string longDetail = WindowsInstallerHost.DescribeSetupFailure("LOADER-SETUP-DETAIL: " + new string('x', 900));
+    Require(longDetail.Length == general.Length + " Setup detail: ".Length + 300, "The setup detail was not length-limited.");
+    Require(WindowsInstallerHost.DescribeSetupFailure("LOADER-SETUP-DETAIL:    \r\n") == general, "A blank detail changed the refusal.");
+}
 
 static void ProvisioningNativeRuntimeEnvironment(PackageFixture fixture)
 {
