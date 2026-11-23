@@ -81,10 +81,19 @@ internal static class DailyLoaderPipe
     private const string Path = @"\\.\pipe\LimitedUnderground.FirmwareLoader.DailyWorker.v1";
     private const uint Overlapped = 0x40000000;
     private const uint OperatorAccess = 0x00120003; // read/write data, READ_CONTROL, SYNCHRONIZE
+    // CreateFileW adds FILE_READ_ATTRIBUTES (0x80) to every open. Without it in the grant the pipe
+    // refuses every open by the assigned user with access denied, even READ_CONTROL alone.
+    internal const uint OperatorGrant = OperatorAccess | 0x80;
 
-    internal static NamedPipeServerStream CreateServer(string operatorSid)
+    internal static string ServerSecurity(string operatorSid, string owner = "SY") =>
+        $"O:{owner}G:{owner}D:P(A;;GA;;;SY)(A;;0x{OperatorGrant:X8};;;{operatorSid})";
+
+    internal static NamedPipeServerStream CreateServer(string operatorSid) => CreateServer(Path, ServerSecurity(operatorSid));
+
+    // Separate entry points let host tests build a pipe with the production security under a test name.
+    internal static NamedPipeServerStream CreateServer(string path, string security)
     {
-        var descriptor = new RawSecurityDescriptor($"O:SYG:SYD:P(A;;GA;;;SY)(A;;0x{OperatorAccess:X8};;;{operatorSid})");
+        var descriptor = new RawSecurityDescriptor(security);
         var bytes = new byte[descriptor.BinaryLength];
         descriptor.GetBinaryForm(bytes, 0);
         var pin = GCHandle.Alloc(bytes, GCHandleType.Pinned);
@@ -96,7 +105,7 @@ internal static class DailyLoaderPipe
                 Descriptor = pin.AddrOfPinnedObject()
             };
             const uint duplex = 3, firstInstance = 0x00080000, rejectRemoteClients = 8;
-            var handle = CreateNamedPipe(Path, duplex | firstInstance | Overlapped, rejectRemoteClients,
+            var handle = CreateNamedPipe(path, duplex | firstInstance | Overlapped, rejectRemoteClients,
                 1, 8192, 8192, 0, ref attributes);
             if (handle.IsInvalid)
             {
@@ -110,10 +119,12 @@ internal static class DailyLoaderPipe
         finally { pin.Free(); }
     }
 
-    internal static NamedPipeClientStream? TryConnect()
+    internal static NamedPipeClientStream? TryConnect() => TryConnect(Path, requireSystemOwner: true);
+
+    internal static NamedPipeClientStream? TryConnect(string path, bool requireSystemOwner)
     {
         const uint securityQosPresent = 0x00100000, securityIdentification = 0x00010000, openExisting = 3;
-        var handle = OpenPipe(Path, OperatorAccess, 0, IntPtr.Zero, openExisting,
+        var handle = OpenPipe(path, OperatorAccess, 0, IntPtr.Zero, openExisting,
             Overlapped | securityQosPresent | securityIdentification, IntPtr.Zero);
         if (handle.IsInvalid)
         {
@@ -125,7 +136,7 @@ internal static class DailyLoaderPipe
 
         try
         {
-            if (!HasSystemOwner(handle)) throw new UnauthorizedAccessException("worker-endpoint");
+            if (requireSystemOwner && !HasSystemOwner(handle)) throw new UnauthorizedAccessException("worker-endpoint");
             return new NamedPipeClientStream(PipeDirection.InOut, true, true, handle);
         }
         catch { handle.Dispose(); throw; }
