@@ -235,14 +235,16 @@ public partial class MainWindow : Window
         var cancellation = lifetime.Token;
         InstallReleaseButton.IsEnabled = ContinueButton.IsEnabled = BackButton.IsEnabled = false;
         SafetyFooter.Text = "QUALIFICATION INSTALL — approved MeshTrail boards only. A write requires your confirmation.";
-        ShowInstallMessage("Checking the release and board", "Connect only the assigned board and keep it plugged in.");
+        ShowInstallMessage("Checking the release and board", "Connect only the assigned board and keep it plugged in. The first check after the PC starts can take a few minutes.");
         bool confirmationSent = false;
         try
         {
-            await using var worker = await DailyLoaderClient.ConnectAsync(cancellation);
+            var connection = await DailyLoaderClient.ConnectAsync(cancellation);
+            await using var worker = connection.Client;
             if (worker is null)
             {
-                ShowInstallMessage("Daily qualification unavailable", "Ask your test coordinator to check the setup and the Windows account assigned to this PC.");
+                ShowInstallMessage("Daily qualification unavailable",
+                    $"Ask your test coordinator to check the setup and the Windows account assigned to this PC. Reference: {connection.Reference}.");
                 return;
             }
             var ready = await worker.PrepareAsync(files, cancellation);
